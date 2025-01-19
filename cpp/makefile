@@ -4,6 +4,9 @@ CXX = g++
 # Compiler flags
 CXXFLAGS = -Iinclude -std=c++17 -Wall -Wextra -O2
 
+# load libraries
+LDLIBS = -llapack -lblas
+
 # Source and object directories
 SRC_DIR = src
 OBJ_DIR = obj
@@ -22,7 +25,7 @@ all: $(TARGET)
 
 # Rule to build the target executable
 $(TARGET): $(OBJS) main.o
-	$(CXX) $(CXXFLAGS) -o $@ $^
+	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDLIBS)
 
 # Rule to compile main.o
 main.o: main.cpp
