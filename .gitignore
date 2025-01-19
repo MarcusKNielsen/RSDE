@@ -3,8 +3,8 @@
 # Ignore object files
 *.o
 
-# Ignore the obj directory (if you don't want it in the repo)
-obj/
+# Ignore the obj directory (where object files are stored)
+cpp/obj/
 
 # Ignore editor/IDE temporary files
 .vscode/
