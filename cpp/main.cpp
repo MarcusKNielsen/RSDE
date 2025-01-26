@@ -3,6 +3,19 @@
 #include "DiagonalMatrix.h"
 #include "SymmetricTriDiagonalMatrix.h"
 #include "LAPACKWrapper.h"
+#include "Hermite.h"
+#include <iomanip>
+
+void printMatrix(double* matrix, int rows, int cols, int precision = 6) {
+    int width = precision + 3;
+    for (int i = 0; i < rows; ++i) {
+        for (int j = 0; j < cols; ++j) {
+            std::cout << std::fixed << std::setprecision(precision)
+                      << std::setw(width) << matrix[i + rows * j] << " ";
+        }
+        std::cout << "\n";
+    }
+}
 
 int main() {
 
@@ -41,35 +54,27 @@ int main() {
     std::cout << "\nSymmetric Tri-Diagonal Matrix: \n";
     B.print();
 
-
-    const int N = 4;                    // Size of the matrix
-    double D[N] = {4.0, 3.0, 2.0, 1.0}; // Diagonal elements
-    double E[N - 1] = {0.1, 0.2, 0.3};  // Subdiagonal elements
-    double Z[N * N] = {0};              // Space for eigenvectors
-    const int LDZ = N;                  // Leading dimension
-
-    try {
-        // Compute eigenvalues (and optionally eigenvectors)
-        computeEigenvalues(N, D, E, Z, LDZ, true);
-
-        std::cout << "Eigenvalues:\n";
-        for (int i = 0; i < N; ++i) {
-            std::cout << D[i] << " ";
-        }
-        std::cout << "\n";
-
-        std::cout << "Eigenvectors (stored column-wise):\n";
-        for (int i = 0; i < N; ++i) {
-            for (int j = 0; j < N; ++j) {
-                std::cout << Z[i + j * N] << " ";
-            }
-            std::cout << "\n";
-        }
-    } catch (const std::exception& e) {
-        std::cerr << e.what() << "\n";
-        return 1;
+    std::cout << "Hermite Nodes First Print" << std::endl;
+    int N = 5;
+    double* x = Nodes(N);
+    for (int i=0; i < N; i++){
+        std::cout << x[i] << std::endl;
     }
 
+    // Vandermonde
+    // Inputs: nodes x, number of nodes N, number of basis functions M
+    int M = 5;
+
+    double* V  = Vander(x,N,M);
+    double* Vx = VanderDiff(x,V,N,M);
+    std::cout << "Matrix: V" << std::endl;
+    printMatrix(V,N,M);
+    std::cout << "Matrix: Vx" << std::endl;
+    printMatrix(Vx,N,M);
+
+    free(x);
+    free(V);
+    free(Vx);
 
     return 0;
 }

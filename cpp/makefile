@@ -2,7 +2,7 @@
 CXX = g++
 
 # Compiler flags
-CXXFLAGS = -Iinclude -std=c++17 -Wall -Wextra -O2
+CXXFLAGS = -Iinclude -std=c++20 -Wall -Wextra -O2
 
 # load libraries
 LDLIBS = -llapack -lblas

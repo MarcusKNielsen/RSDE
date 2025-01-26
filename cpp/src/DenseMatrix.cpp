@@ -24,3 +24,4 @@ void DenseMatrix::set(int row, int col, double value) {
 int DenseMatrix::index(int row, int col) const {
     return col * rows + row;
 }
+
