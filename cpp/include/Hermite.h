@@ -16,4 +16,5 @@ double* Nodes(int N);
 double* Vander(double* x, int N, int M);
 double* VanderDiff(double* x, double* V, int N, int M);
 
+
 #endif
