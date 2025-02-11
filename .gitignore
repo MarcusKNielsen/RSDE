@@ -9,3 +9,5 @@ cpp/obj/
 # Ignore editor/IDE temporary files
 .vscode/
 
+**/__pycache__/
+**/*.pyc
