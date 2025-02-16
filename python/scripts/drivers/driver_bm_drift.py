@@ -5,10 +5,15 @@ from scipy.integrate import solve_ivp
 from src.ivp_solver import ivp_solver, fun, Jac
 from scripts.systems.bm_drift import a,D,dadx,dDdx
 
+"""
+Brownian Motion with Drift
+dXt = p1*dt+p2*dBt
+"""
+
 def gauss(t,x,a,D,loc):
     return np.exp(-(x-a*t-loc)**2/(4*D*t))/np.sqrt(4*np.pi*D*t)
 
-N = 16
+N = 32
 z,w = nodes(N)
 V,Vz = vander(z)
 
@@ -19,11 +24,11 @@ Dz2 = Dz@Dz
 Mz = (Vinv.T @ Vinv).T
 
 t0 = 10.0
-tf = 120.0
-p = np.array([1.0,1.5])
+tf = 20.0
+p = np.array([0.0,1.0])
 
 # initial condition (skew-gauss)
-x0 = np.linspace(-100,100,1000)
+x0 = np.linspace(-2*t0*p[1],2*t0*p[1],1000)
 loc = -p[0]*t0
 u0 = gauss(t0,x0,p[0],p[1]**2/2,loc)
 dx = x0[1] - x0[0]
@@ -64,6 +69,7 @@ plt.show()
 #%%
 
 J = Jac(res['t'], res['y'], *p2)
+#J = J[3:,3:]
 eigs = np.linalg.eigvals(J)
 Re = np.real(eigs)
 Im = np.imag(eigs)
@@ -73,6 +79,8 @@ plt.grid(True)
 plt.xlabel("Real Part")
 plt.ylabel("Imaginary Part")
 plt.show()
+Re = np.sort(Re)
+print(Re.max())
 
 #%%
 
@@ -83,7 +91,8 @@ def compute_jacobian(fun, t, y, z, Dz, Dz2, M, a, D, p):
     Computes the Jacobian of the function `fun` with respect to y using finite differences.
     """
     
-    epsilon=1e-7
+    epsilon=1e-10
+    
     
     def wrapped_fun(y_flat):
         y_vec = y_flat.reshape(y.shape)
@@ -93,6 +102,14 @@ def compute_jacobian(fun, t, y, z, Dz, Dz2, M, a, D, p):
     return jacobian.reshape(y.size, y.size)
 
 J_test = compute_jacobian(fun, res['t'], res['y'], *p1)
+
+
+
+#plt.close('all')
+
+
+
+
 
 
 

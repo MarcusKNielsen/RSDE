@@ -172,7 +172,9 @@ def fun(t,y,z,Dz,Dz2,M,a,D,p):
     
     f[0]  = R
     f[1]  = Q
-    f[2:] = ((Q*z+R)*Dzw + Q*w - (Dz@F))/s
+    #f[2:] = ((Q*z+R)*Dzw + Q*w - (Dz@F))/s
+    f[2:] = Dz@(((Q*z+R)*w - F)/s)
+    #f[2:] = -Dz@((a(t,x,p)-Q*z-R)*w/s - (D(t,x,p)/s**2)*Dzw)
     
     return f
 

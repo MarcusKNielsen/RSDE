@@ -5,6 +5,11 @@ from src.ivp_solver import ivp_solver, fun, Jac
 from scripts.systems.gmb import a,D,dadx,dDdx
 from scipy.stats import norm
 
+"""
+Geometric Brownian Motion
+dXt = p1*Xt*dt+p2*Xt*dBt
+Diffusion: D(t,x) = (p2*x)**2/2
+"""
 
 N = 32
 z,w = nodes(N)
@@ -17,14 +22,12 @@ Dz2 = Dz@Dz
 Mz = (Vinv.T @ Vinv).T
 
 t0 = 0
-tf = 5.5
-p = np.array([0.1,0.0])
+tf = 0.55
+p = np.array([1.1,0.2])
 
 loc = 5
-scale = 0.2
-
-# initial condition (skew-gauss)
-x0 = np.linspace(3,7,1000)
+scale = 0.1
+x0 = np.linspace(loc-6*scale,loc+6*scale,1000)
 u0 = norm.pdf(x0,loc,scale)
 dx = x0[1] - x0[0]
 y0 = np.zeros(N+2)
@@ -69,6 +72,25 @@ plt.xlabel("Real Part")
 plt.ylabel("Imaginary Part")
 plt.show()
 
+print(f"max real eig = {Re.max()}")
+
+from scipy.optimize import approx_fprime
+
+def compute_jacobian(fun, t, y, z, Dz, Dz2, M, a, D, p):
+    """
+    Computes the Jacobian of the function `fun` with respect to y using finite differences.
+    """
+    
+    epsilon=1e-10
+    
+    def wrapped_fun(y_flat):
+        y_vec = y_flat.reshape(y.shape)
+        return fun(t, y_vec, z, Dz, Dz2, M, a, D, p).flatten()
+    
+    jacobian = approx_fprime(y.flatten(), wrapped_fun, epsilon)
+    return jacobian.reshape(y.size, y.size)
+
+J_test = compute_jacobian(fun, res['t'], res['y'], *p1)
 
 
 
