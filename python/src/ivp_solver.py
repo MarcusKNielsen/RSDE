@@ -173,7 +173,7 @@ def fun(t,y,z,Dz,Dz2,M,a,D,p):
     f[0]  = R
     f[1]  = Q
     #f[2:] = ((Q*z+R)*Dzw + Q*w - (Dz@F))/s
-    f[2:] = Dz@(((Q*z+R)*w - F)/s)
+    f[2:] = (1/s)*Dz@((Q*z+R)*w - F)
     #f[2:] = -Dz@((a(t,x,p)-Q*z-R)*w/s - (D(t,x,p)/s**2)*Dzw)
     
     return f
@@ -221,10 +221,12 @@ def Jac(t, y, z, Dz, M, a, D, dadx, dDdx, p):
     wdRdw = np.outer(w, dRdw)  # (N,N)
     
     RI = np.diag(R * e)  # (N,N)
-    QI = np.diag(Q * e)  # (N,N)
-    Z = np.diag(z)  # (N,N)
+    #QI = np.diag(Q * e)  # (N,N)
+    QZ = np.diag(Q*z)  # (N,N)
+    Z  = np.diag(z)    # (N,N)
 
-    dSdw = (1/s) * (Z @ Dz @ (QI + wdQdw) + Dz @ (RI + wdRdw) + QI + wdQdw - Dz @ dFdw)  # (N,N)
+    #dSdw = (1/s) * (Z @ Dz @ (QI + wdQdw) + Dz @ (RI + wdRdw) + QI + wdQdw - Dz @ dFdw)  # (N,N)
+    dSdw = (1/s) * Dz@(QZ + Z@wdQdw + RI + wdRdw - dFdw) 
     
     # block structure
     J = np.block([

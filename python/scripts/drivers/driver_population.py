@@ -11,7 +11,7 @@ dXt = p1*Xt*(p2-Xt)*dt+p3*Xt*dBt
 Diffusion: D(t,x) = (p3*x)**2/2
 """
 
-N = 16
+N = 32
 z,w = nodes(N)
 V,Vz = vander(z)
 

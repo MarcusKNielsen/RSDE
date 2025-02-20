@@ -6,7 +6,7 @@ from scripts.systems.bm_drift import a,D,dadx,dDdx
 from scipy.stats import norm
 
 
-N = 64
+N = 32
 z,w = nodes(N)
 V,Vz = vander(z)
 
@@ -17,7 +17,7 @@ Dz2 = Dz@Dz
 Mz = (Vinv.T @ Vinv).T
 
 t0 = 0.0
-tf = 20.0
+tf = 10.1
 
 # Parameters
 advec = 5.0
@@ -55,7 +55,7 @@ plt.legend()
 plt.tight_layout()
 plt.show()
 
-error = norm.pdf(xf,advec*tf,2) - uf
+error = norm.pdf(xf,advec*tf,s0) - uf
 print(f"error = {np.max(np.abs(error))}")
 plt.figure()
 plt.plot(xf,error)
@@ -74,3 +74,21 @@ plt.xlabel("Real Part")
 plt.ylabel("Imaginary Part")
 plt.show()
 
+from scipy.optimize import approx_fprime
+
+def compute_jacobian(fun, t, y, z, Dz, Dz2, M, a, D, p):
+    """
+    Computes the Jacobian of the function `fun` with respect to y using finite differences.
+    """
+    
+    epsilon=1e-10
+    
+    def wrapped_fun(y_flat):
+        y_vec = y_flat.reshape(y.shape)
+        return fun(t, y_vec, z, Dz, Dz2, M, a, D, p).flatten()
+    
+    jacobian = approx_fprime(y.flatten(), wrapped_fun, epsilon)
+    return jacobian.reshape(y.size, y.size)
+
+J = Jac(res['t'], res['y'], *p2)
+J_test = compute_jacobian(fun, res['t'], res['y'], *p1)

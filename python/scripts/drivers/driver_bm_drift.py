@@ -1,7 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from src.hermite import nodes,vander
-from scipy.integrate import solve_ivp
 from src.ivp_solver import ivp_solver, fun, Jac
 from scripts.systems.bm_drift import a,D,dadx,dDdx
 
@@ -13,7 +12,7 @@ dXt = p1*dt+p2*dBt
 def gauss(t,x,a,D,loc):
     return np.exp(-(x-a*t-loc)**2/(4*D*t))/np.sqrt(4*np.pi*D*t)
 
-N = 32
+N = 16
 z,w = nodes(N)
 V,Vz = vander(z)
 
@@ -24,8 +23,8 @@ Dz2 = Dz@Dz
 Mz = (Vinv.T @ Vinv).T
 
 t0 = 10.0
-tf = 20.0
-p = np.array([0.0,1.0])
+tf = 100.0
+p = np.array([1.0,1.0])
 
 # initial condition (skew-gauss)
 x0 = np.linspace(-2*t0*p[1],2*t0*p[1],1000)
@@ -85,6 +84,7 @@ print(Re.max())
 #%%
 
 from scipy.optimize import approx_fprime
+from src.ivp_solver import ivp_solver, fun, Jac
 
 def compute_jacobian(fun, t, y, z, Dz, Dz2, M, a, D, p):
     """
@@ -103,7 +103,7 @@ def compute_jacobian(fun, t, y, z, Dz, Dz2, M, a, D, p):
 
 J_test = compute_jacobian(fun, res['t'], res['y'], *p1)
 
-
+dJ = np.abs(J - J_test)<1e-3
 
 #plt.close('all')
 

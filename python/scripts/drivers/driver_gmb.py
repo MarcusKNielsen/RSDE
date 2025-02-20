@@ -22,8 +22,8 @@ Dz2 = Dz@Dz
 Mz = (Vinv.T @ Vinv).T
 
 t0 = 0
-tf = 0.55
-p = np.array([1.1,0.2])
+tf = 2.55
+p = np.array([1.1,0.1])
 
 loc = 5
 scale = 0.1
@@ -49,7 +49,7 @@ uf = wf/sf
 
 x = np.linspace(np.min(xf),np.max(xf),100)
 plt.figure()
-plt.plot(x0,u0)
+#plt.plot(x0,u0)
 plt.plot(xf,uf,".-",label=r"$u(x,t_f)$")
 plt.xlabel("x: space")
 plt.title("Initial condition and stationary distribution")
@@ -59,20 +59,22 @@ plt.show()
 
 #%%
 
-J = Jac(res['t'], res['y'], *p2)
-eigs = np.linalg.eigvals(J)
-Re = np.real(eigs)
-Im = np.imag(eigs)
-plt.figure()
-plt.plot(Re,Im,".")
-#plt.plot(Re[Re>0],Im[Re>0],".",color="red")
-plt.vlines(0, np.min(Im), np.max(Im), linestyle = "--", color="red")
-plt.grid(True)
-plt.xlabel("Real Part")
-plt.ylabel("Imaginary Part")
-plt.show()
 
-print(f"max real eig = {Re.max()}")
+
+def plot_eigs(eigs,title="default"):
+    Re = np.real(eigs)
+    Im = np.imag(eigs)
+    plt.figure()
+    plt.plot(Re,Im,".")
+    plt.vlines(0, np.min(Im), np.max(Im), linestyle = "--", color="red")
+    plt.title(title)
+    plt.grid(True)
+    plt.xlabel("Real Part")
+    plt.ylabel("Imaginary Part")
+    plt.show()
+    print(f"max real eig = {Re.max()}")
+
+
 
 from scipy.optimize import approx_fprime
 
@@ -90,8 +92,14 @@ def compute_jacobian(fun, t, y, z, Dz, Dz2, M, a, D, p):
     jacobian = approx_fprime(y.flatten(), wrapped_fun, epsilon)
     return jacobian.reshape(y.size, y.size)
 
+J = Jac(res['t'], res['y'], *p2)
 J_test = compute_jacobian(fun, res['t'], res['y'], *p1)
 
+dJ = np.abs(J - J_test)<1e-3
 
+J_eigs = np.linalg.eigvals(J)
+plot_eigs(J_eigs,"analytical")
+J_test_eigs = np.linalg.eigvals(J_test)
+plot_eigs(J_test_eigs,"finite difference")
 
 
