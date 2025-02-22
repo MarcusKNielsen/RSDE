@@ -3,7 +3,6 @@ import matplotlib.pyplot as plt
 from src.hermite import nodes,vander,hermite_weight_matrix
 
 
-
 """
 Construct priors for two players
 """

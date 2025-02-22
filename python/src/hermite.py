@@ -100,3 +100,41 @@ if __name__ == "__main__":
 
     print(np.max(np.abs(W-W1)))
 
+    """
+    Discrete Product Rule
+    """
+    
+    import matplotlib.pyplot as plt
+    
+    N = 50
+    z,w = nodes(N)
+    V,Vz = vander(z)
+    Vinv = np.linalg.inv(V)
+    Dz =  Vz @ Vinv
+    
+    f = np.exp(-z**2/5)
+    g = np.exp(-z**2/3)
+    dfg = (-16*z/15) * f * g
+    
+    res1 = Dz@(f*g)
+    res2 = (Dz@f)*g + f*(Dz@g)
+    
+    fig,axes = plt.subplots(1,2,figsize=(10,5))
+    
+    axes[0].plot(z,f,".-",label=r"$f(z) = \exp(-z^2/5)$")
+    axes[0].plot(z,g,".-",label=r"$g(z) = \exp(-z^2/3)$")
+    axes[0].plot(z,f*g,".-",label=r"$fg$")
+    axes[0].legend()
+    
+    axes[1].plot(z,res1,".-",label=r"$\mathcal{D}_z(f \cdot g)$")
+    axes[1].plot(z,res2,".-",label=r"$(\mathcal{D}_zf) \cdot g + f \cdot (\mathcal{D}_zg)$")
+    axes[1].plot(z,dfg,"--",label=r"$ \frac{\partial}{\partial z} fg $")
+    axes[1].legend()
+    
+    plt.tight_layout()
+    plt.show()
+    
+
+    
+    
+    
