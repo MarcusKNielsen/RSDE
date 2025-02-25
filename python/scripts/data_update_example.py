@@ -154,64 +154,22 @@ plt.show()
 
 #%%
 """
-Compute integral
+integrate oppenent out to get a "marginal likelihood"
 """
 
 Vv,_ = vander(z1,HermiteFunc=False) 
-Vvlarge,_ = vander(zlarge,N,HermiteFunc=False) 
-
 Vvinv = np.linalg.inv(Vv)
-
 W = hermite_weight_matrix(N1,N)
 
-i = -1
-
-# fig, axes = plt.subplots(1, 2, figsize=(8, 4))
-
-# axes[0].plot(x1_small,v[i])
-# axes[0].plot(x1_small,u1)
-# axes[0].plot(x1_small,u1*v[i])
-# axes[0].set_xlabel(r"$x_1$")
-
-# axes[1].plot(z1,v[i])
-# axes[1].plot(z1,w1/s1)
-# axes[1].plot(z1,(w1/s1)*v[i])
-# axes[1].set_xlabel(r"$z_1$")
-
-# plt.tight_layout()
-# plt.show()
-
-dz = zlarge[1:] - zlarge[:-1]
-
-v1large = Vvlarge@(Vvinv @ v[i])
-int1 = np.sum(v1large[1:]*w1large[1:]*dz)
-
-v2large = Vvlarge@(Vvinv @ (v.T)[i])
-int2 = np.sum(v2large[1:]*w2large[1:]*dz)
-
-# print(int1,int2)
-
-
-# fig, axes = plt.subplots(1, 2, figsize=(8, 4))
-
-# axes[0].plot(zlarge,w1large)
-# axes[0].plot(zlarge,v1large)
-# axes[0].set_xlabel(r"$z_1$")
-
-# axes[1].plot(zlarge,w2large)
-# axes[1].plot(zlarge,v2large)
-# axes[1].set_xlabel(r"$z_2$")
-
-# plt.tight_layout()
-# plt.show()
-
-#%%
 
 like1 = (Vvinv @ (v.T)).T @ W @ what
 like2 = (Vvinv @ v).T @ W @ what
 
-# like1_large = Vvlarge @ (Vvinv@like1)
-# like2_large = Vvlarge @ (Vvinv@like2)
+#%%
+"""
+Perform Bayesian update
+"""
+
 
 post1 = like1*w1
 post1 = post1/np.sum(M@post1,axis=0)
@@ -226,7 +184,6 @@ post2_large = Vlarge @ (Vinv@post2)
 fig, axes = plt.subplots(1, 3, figsize=(12, 4))
 
 axes[0].plot(x1,u1large,label=r"prior")
-#axes[0].plot(x1,like1_large,label=r"likelihood")
 axes[0].plot(x1_small,like1,label=r"likelihood")
 axes[0].plot(x1,post1_large,label=r"posterior")
 axes[0].set_xlabel(r"$x_1$")
@@ -235,7 +192,6 @@ axes[0].set_title("Player 1")
 axes[0].legend()
 
 axes[1].plot(x2,u2large,label=r"prior")
-#axes[1].plot(x2,like2_large,label=r"likelihood")
 axes[1].plot(x2_small,like2,label=r"likelihood")
 axes[1].plot(x2,post2_large,label=r"posterior")
 axes[1].set_xlabel(r"$x_2$")

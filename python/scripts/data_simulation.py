@@ -15,10 +15,10 @@ def like(x,A):
     return P
 
 # Example usage:
-num_of_players = 5
-num_of_matches = num_of_players * 100
+num_of_players = 2
+num_of_matches = 100
 t0 = 0.0
-tf = 10.0
+tf = 2.0
 dt = 0.001
 
 # Initial condition
@@ -81,7 +81,20 @@ match_data = pd.DataFrame({
     "player1won": outcomes
 })
 
-save_path = os.path.join(os.path.dirname(__file__), "../../data/match_data.csv")
+# Convert types explicitly
+match_data = match_data.astype({
+    "sim_idx": np.int32,
+    "time": np.float64,
+    "player1": np.int8,
+    "player2": np.int8,
+    "player1won": np.int8
+})
 
-match_data.to_csv(save_path, index=False)
-sim_data.to_csv(save_path, index=False)
+
+
+match_data_path = os.path.join(os.path.dirname(__file__), "../../data/match_data.csv")
+sim_data_path = os.path.join(os.path.dirname(__file__), "../../data/sim_data.csv")
+
+
+match_data.to_csv(match_data_path, index=False)
+sim_data.to_csv(sim_data_path, index=False)
