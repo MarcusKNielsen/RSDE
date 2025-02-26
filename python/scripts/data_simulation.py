@@ -16,9 +16,9 @@ def like(x,A):
 
 # Example usage:
 num_of_players = 2
-num_of_matches = 100
+num_of_matches = 80
 t0 = 0.0
-tf = 2.0
+tf = 10.0
 dt = 0.001
 
 # Initial condition

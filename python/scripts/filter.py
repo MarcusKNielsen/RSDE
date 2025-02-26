@@ -23,7 +23,7 @@ data = pd.read_csv(file_path, dtype={
     "player1won": np.int8
 })
 
-#data = data[:10]
+data = data[:50]
 
 """
 Define likelihood
@@ -58,9 +58,8 @@ dXt = p1(p2-Xt)*dt+p3*dBt
 Diffusion: D = p3**2/2
 """
 
-
 # Initialize grid and matrices
-N = 16
+N = 24
 z,w = nodes(N)
 
 # Matrices based on Hermite Functions
@@ -75,6 +74,11 @@ Vp,_ = vander(z,HermiteFunc=False)
 Vpinv = np.linalg.inv(Vp)
 W = hermite_weight_matrix(N,N)
 Mc = Vinv.T @ W @ Vpinv
+
+# Decompose Mc using svd for stability
+U, S, Vt = np.linalg.svd(Mc)
+S = np.diag(S)
+US = U@S
 
 # setup parameters
 p = np.array([1.0,0.0,np.sqrt(2)])
@@ -162,8 +166,11 @@ for match_ in data.itertuples(index=False):
     like = likelihood(x1,x2,outcome)
     
     # Compute marginal state likelihoods
-    like1 = w1.T @ Mc @ like   # dx1 integral
-    like2 = w2.T @ Mc @ like.T # dx2 integral
+    # like2 = w1.T @ Mc @ like   # dx1 integral
+    # like1 = w2.T @ Mc @ like.T # dx2 integral
+    
+    like2 = w1.T @ US @ (Vt @ like)   # dx1 integral
+    like1 = w2.T @ US @ (Vt @ like.T) # dx2 integral
     
     # Compute posterior using Bayes rule
     u1 = like1*(w1/s1)
@@ -190,7 +197,7 @@ for match_ in data.itertuples(index=False):
     V1inv = np.linalg.inv(V1)
     V2inv = np.linalg.inv(V2)
     
-    # Compute w on original z grid
+    # Compute w on original z grid via interpolation
     w1 = s1*(V @ V1inv @ u1)
     w2 = s2*(V @ V2inv @ u2)
     
@@ -220,29 +227,24 @@ m = player_info.players[player].data_matrix[:,0]
 s = player_info.players[player].data_matrix[:,1]
 w = player_info.players[player].data_matrix[:,2:]
 
-# # compute x grid
-# x = s[:,np.newaxis] * z + m[:,np.newaxis] # not sure if correct
+# plt.figure()
+# T,Z = np.meshgrid(t,z)
+# plt.pcolormesh(T,Z,w.T)
+# plt.show()
 
-# # compute u
-# u = w/s[:, np.newaxis]
-
-# for i in range(len(t)):
-#     plt.plot(x[i],u[i],label=f"t={t[i]}")
-    
-# plt.legend()
 
 #%%
 
 
+def get_density_of_player(player,player_info,x_large):
 
-def plot_player(player,xl,xr,M):
+    M = len(x_large)    
 
     t = player_info.players[player].times
     m = player_info.players[player].data_matrix[:,0]
     s = player_info.players[player].data_matrix[:,1]
     w = player_info.players[player].data_matrix[:,2:]
     
-    x_large = np.linspace(xl,xr,M)
     z_large = (x_large - m[:,np.newaxis])/s[:,np.newaxis]
     w_large = np.zeros([len(t),M])
     
@@ -251,31 +253,42 @@ def plot_player(player,xl,xr,M):
         w_large[i] = V_large@Vinv@w[i]
     
     u_large = w_large/s[:, np.newaxis]
-    
 
-    plt.figure()
-    T,X = np.meshgrid(t,x_large)
-    plt.pcolormesh(T,X,u_large.T)
-    plt.xlabel("t: time")
-    plt.ylabel("x: space")
-    plt.title(f"Player {player}")
-    plt.show()
+    return u_large    
 
-M  =  100
-xl = -5
-xr =  5
+
+
+# Read CSV into a DataFrame
+sim_data = pd.read_csv(f"{path}/sim_data.csv")
+
+x_large = np.linspace(-5,5,100)
 
 player = 0
-plot_player(player,xl,xr,M)
+u1_large = get_density_of_player(player,player_info,x_large)
 
 player = 1
-plot_player(player,xl,xr,M)
+u2_large = get_density_of_player(player,player_info,x_large)
 
-#%%
-plt.figure()
-T,Z = np.meshgrid(t,z)
-plt.pcolormesh(T,Z,w.T)
+fig,ax = plt.subplots(1,2,figsize=(10,4))
+
+T,X = np.meshgrid(t,x_large)
+
+ax[0].pcolormesh(T,X,u1_large.T)
+ax[0].plot(sim_data.time,sim_data.Player0,color="red")
+ax[0].set_xlabel("t: time")
+ax[0].set_ylabel("x: space")
+ax[0].set_xlim([t[0],t[-1]])
+
+ax[1].pcolormesh(T,X,u2_large.T)
+ax[1].plot(sim_data.time,sim_data.Player1,color="red")
+ax[1].set_xlabel("t: time")
+ax[1].set_ylabel("x: space")
+ax[1].set_xlim([t[0],t[-1]])
+
+plt.tight_layout()
 plt.show()
+
+
 
 
 
