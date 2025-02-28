@@ -237,3 +237,82 @@ def Jac(t, y, z, Dz, M, a, D, dadx, dDdx, p):
     
     return J
 
+"""
+The is the system expressed in terms of the wave function
+"""
+
+def fun_wave(t,y,z,Dz,Dz2,M,a,D,p):
+    
+    mu  = y[0]  # Mean
+    s   = y[1]  # Standard deviation
+    Psi = y[2:] # Psi
+    
+    f = np.zeros_like(y)
+    x = s*z+mu
+    
+    DzPsi = Dz@Psi
+    G  = a(t,x,p)*Psi - (2*D(t,x,p)/s)*(DzPsi)
+    MG = M@G
+    R  = Psi@MG
+    Q  = (z*Psi)@MG
+    
+    f[0]  = R
+    f[1]  = Q
+    f[2:] = (1/(2*s))*Dz@((Q*z+R)*Psi - G)
+
+    
+    return f
+
+
+def Jac_wave(t, y, z, Dz, M, a, D, dadx, dDdx, p):
+    
+    mu  = y[0]  # Mean
+    s   = y[1]  # Standard deviation
+    Psi = y[2:] # Psi
+    
+    x = s*z+mu
+    e = np.ones_like(z)
+
+    DzPsi = Dz @ Psi
+    G  = a(t,x,p) * Psi - (2*D(t,x,p) / s) * DzPsi
+    PsiM  = Psi @ M
+    zPsiM = (z*Psi) @ M
+    R  = PsiM @ G
+    Q  = zPsiM @ G
+    S  = (1/(2*s)) * Dz @ ((Q*z+R*e)*Psi) - G
+    
+    # Compute derivatives
+    dGdmu = dadx(t,x,p) * Psi - (2/s) * dDdx(t,x,p) * DzPsi
+    dRdmu = np.array([[PsiM @ dGdmu]])   # (1,1)
+    dQdmu = np.array([[zPsiM @ dGdmu]])  # (1,1)
+    dJdmu = (dQdmu*z + dRdmu*e)*Psi - dGdmu
+    dSdmu = (1/(2*s)) * Dz @ dJdmu
+    dSdmu = dSdmu.reshape(len(z), 1)  # (N,1)
+
+    dGds = dadx(t,x,p) * z * Psi - 2*(-D(t,x,p) / s**2 + (1/s) * dDdx(t,x,p) * z) * DzPsi
+    dRds = np.array([[ PsiM @ dGds]])  # (1,1)
+    dQds = np.array([[zPsiM @ dGds]])  # (1,1)
+    dJds = (dQds*z + dRds*e)*Psi - dGds
+    dSds = (-1/s)*S + (1/(2*s))*Dz@dJds
+    dSds = dSds.reshape(len(z), 1)  # (N,1)
+
+    dGdPsi = np.diag(a(t,x,p)) - (2/s) * (np.diag(D(t,x,p)) @ Dz)
+    dRdPsi =  PsiM @ dGdPsi  # (1,N)
+    dQdPsi = zPsiM @ dGdPsi  # (1,N)
+
+    PsidRdPsi  = np.outer(Psi, dRdPsi)  # (N,N)
+    zPsidQdPsi = np.outer((z*Psi), dQdPsi)  # (N,N)
+    
+    RI = np.diag(R*e)  # (N,N)
+    QZ = np.diag(Q*z)  # (N,N)
+
+    dSdPsi = (1/(2*s)) * Dz@(QZ + zPsidQdPsi + RI + PsidRdPsi - dGdPsi) 
+    
+    # block structure
+    J = np.block([
+        [dRdmu, dRds, dRdPsi],  # (1,1), (1,1), (1,N)
+        [dQdmu, dQds, dQdPsi],  # (1,1), (1,1), (1,N)
+        [dSdmu, dSds, dSdPsi]   # (N,1), (N,1), (N,N)
+    ])
+    
+    return J

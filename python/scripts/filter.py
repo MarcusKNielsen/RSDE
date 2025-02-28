@@ -70,15 +70,11 @@ Dz = Vz @ Vinv
 Dz2 = Dz@Dz
 
 # Matrices based on Hermite polynomials
-Vp,_ = vander(z,HermiteFunc=False) 
-Vpinv = np.linalg.inv(Vp)
+VH,_ = vander(z,HermiteFunc=False) 
+VHinv = np.linalg.inv(VH)
 W = hermite_weight_matrix(N,N)
-Mc = Vinv.T @ W @ Vpinv
-
-# Decompose Mc using svd for stability
-U, S, Vt = np.linalg.svd(Mc)
-S = np.diag(S)
-US = U@S
+VF = np.diag(np.exp(-z**2)) @ VH
+VFinv = np.linalg.inv(VF)
 
 # setup parameters
 p = np.array([1.0,0.0,np.sqrt(2)])
@@ -105,7 +101,9 @@ player_info = PlayerInfo(data, N+2)
 Run filter / Loop through data
 """
 
-for match_ in data.itertuples(index=False):
+for match_idx, match_ in enumerate(data.itertuples(index=False)):
+    
+    print(match_idx)
     
     """
     Extract relevant data
@@ -166,11 +164,8 @@ for match_ in data.itertuples(index=False):
     like = likelihood(x1,x2,outcome)
     
     # Compute marginal state likelihoods
-    # like2 = w1.T @ Mc @ like   # dx1 integral
-    # like1 = w2.T @ Mc @ like.T # dx2 integral
-    
-    like2 = w1.T @ US @ (Vt @ like)   # dx1 integral
-    like1 = w2.T @ US @ (Vt @ like.T) # dx2 integral
+    like2 = (VFinv @ w1).T @ (VHinv @ like)   # dx1 integral
+    like1 = (VFinv @ w2).T @ (VHinv @ like.T) # dx2 integral
     
     # Compute posterior using Bayes rule
     u1 = like1*(w1/s1)
