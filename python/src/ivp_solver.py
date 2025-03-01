@@ -283,15 +283,15 @@ def Jac_wave(t, y, z, Dz, M, a, D, dadx, dDdx, p):
     
     # Compute derivatives
     dGdmu = dadx(t,x,p) * Psi - (2/s) * dDdx(t,x,p) * DzPsi
-    dRdmu = np.array([[PsiM @ dGdmu]])   # (1,1)
-    dQdmu = np.array([[zPsiM @ dGdmu]])  # (1,1)
+    dRdmu = PsiM @ dGdmu
+    dQdmu = zPsiM @ dGdmu
     dJdmu = (dQdmu*z + dRdmu*e)*Psi - dGdmu
     dSdmu = (1/(2*s)) * Dz @ dJdmu
     dSdmu = dSdmu.reshape(len(z), 1)  # (N,1)
 
     dGds = dadx(t,x,p) * z * Psi - 2*(-D(t,x,p) / s**2 + (1/s) * dDdx(t,x,p) * z) * DzPsi
-    dRds = np.array([[ PsiM @ dGds]])  # (1,1)
-    dQds = np.array([[zPsiM @ dGds]])  # (1,1)
+    dRds = PsiM @ dGds
+    dQds = zPsiM @ dGds
     dJds = (dQds*z + dRds*e)*Psi - dGds
     dSds = (-1/s)*S + (1/(2*s))*Dz@dJds
     dSds = dSds.reshape(len(z), 1)  # (N,1)
@@ -307,6 +307,12 @@ def Jac_wave(t, y, z, Dz, M, a, D, dadx, dDdx, p):
     QZ = np.diag(Q*z)  # (N,N)
 
     dSdPsi = (1/(2*s)) * Dz@(QZ + zPsidQdPsi + RI + PsidRdPsi - dGdPsi) 
+    
+    # reshape stuff
+    dRdmu = np.array([[PsiM @ dGdmu]])   # (1,1)
+    dQdmu = np.array([[zPsiM @ dGdmu]])  # (1,1)
+    dRds  = np.array([[ PsiM @ dGds]])   # (1,1)
+    dQds  = np.array([[zPsiM @ dGds]])   # (1,1)
     
     # block structure
     J = np.block([

@@ -1,20 +1,41 @@
 import numpy as np
-from numpy.polynomial.hermite import hermgauss
 
-def nodes(N, Prob=False):
-    nodes, weights = hermgauss(N)
+"""
+Golub-Welsch algorithm
+Function to compute Gauss-Hermite quadrature nodes and weights.
+Both the physicist version and the probabilistic version.
+"""
+
+def nodes(N,Prob=False):
     
-    if Prob == False:
-        return nodes, weights
+    # subdiagonals
+    if Prob == True:
+        sub_diags = np.sqrt(np.arange(1, N))
+    else:
+        sub_diags = np.sqrt(np.arange(1, N)/2)
     
-    # Convert to probabilistic Hermite-Gauss quadrature
-    nodes = nodes / np.sqrt(2)
-    weights = weights / np.sqrt(np.pi)
+    # Construct the symmetric tridiagonal matrix
+    J = np.diag(sub_diags, 1) + np.diag(sub_diags, -1)
+    
+    # Compute eigenvalues and eigenvectors
+    nodes, V = np.linalg.eigh(J)
+    
+    # Sort eigenvalues and corresponding eigenvectors
+    i = np.argsort(nodes)
+    nodes = nodes[i]
+    Vtop = V[0, :]
+    Vtop = Vtop[i]
+    
+    # Compute weights
+    if Prob == True:
+        weights = np.sqrt(np.pi/2) * Vtop ** 2
+    else:
+        weights = np.sqrt(np.pi) * Vtop ** 2
     
     return nodes, weights
     
 
-def vander( x, N=None, HermiteFunc=True, Prob=False):
+def vander(x,N=None,HermiteFunc=True):
 
     K = len(x)
     
@@ -25,72 +46,119 @@ def vander( x, N=None, HermiteFunc=True, Prob=False):
     V  = np.zeros([K,N])
     Vx = np.zeros([K,N])    
 
-    if Prob==False:
+    # Hermite (n=0)
+    V[:,0]  = np.pi**(-0.25)
+    
+    if HermiteFunc == True:
+        V[:,0]  *= np.exp(-0.5*x**2)
+
+    # Diff Hermite (n=0)
+    if HermiteFunc == True:
+        Vx[:,0] = -x*V[:,0]
+    else:
+        Vx[:,0] = np.zeros_like(x)
+
+    if N == 1:
+        return V,Vx
+
+    # Hermite (n=1)
+    V[:,1]  = np.sqrt(2)*x*V[:,0]
+    
+    # Diff Hermite (n=1)
+    if HermiteFunc == True:
+        Vx[:,1] = 2*np.sqrt(1/2)*V[:,0]-x*V[:,1]
+    else:
+        Vx[:,1] = np.sqrt(2)*np.pi**(-0.25)
+    
+    if N == 2:
+        return V,Vx
+    
+    for n in range(1,N-1):
         
-        # Hermite (n=0)
-        V[:,0]  = np.pi**(-0.25)
+        # Recurrence relation for both Hermite Functions and Polynomials
+        V[:,n+1]  = np.sqrt(2/(n+1)) * (x*V[:,n] - np.sqrt(n/2)*V[:,n-1])
         
         if HermiteFunc == True:
-            V[:,0]  *= np.exp(-0.5*x**2)
+            # Recurrence relation Diff Hermite Functions
+            Vx[:,n+1] = 2*np.sqrt((n+1)/2)*V[:,n] - x*V[:,n+1]
+        else:
+            # Recurrence relation Diff Hermite Polynomials
+            Vx[:,n+1] = np.sqrt(2*(n+1)) * V[:,n]
+        
+        
+    return V,Vx
+
+def vander2(x,N=None,HermiteFunc=True,Prob=False):
     
-        # Diff Hermite (n=0)
-        Vx[:,0] = -x*V[:,0]
+    K = len(x)
     
-        if N == 1:
-            return V,Vx
+    if N == None:
+        N = K
     
-        # Hermite (n=1)
-        V[:,1]  = np.sqrt(2)*x*V[:,0]
-        
-        # Diff Hermite (n=1)
-        Vx[:,1] = 2*np.sqrt(1/2)*V[:,0]-x*V[:,1]
-        
-        if N == 2:
-            return V,Vx
-        
-        for n in range(1,N-1):
-            
-            # Recurrence relation for both Hermite Functions and Polynomials
-            V[:,n+1]  = np.sqrt(2/(n+1)) * (x*V[:,n] - np.sqrt(n/2)*V[:,n-1])
-            
-            if HermiteFunc == True:
-                # Recurrence relation Diff Hermite Functions
-                Vx[:,n+1] = 2*np.sqrt((n+1)/2)*V[:,n] - x*V[:,n+1]
-            else:
-                # Recurrence relation Diff Hermite Polynomials
-                Vx[:,n+1] = np.sqrt(2*(n+1)) * V[:,n]
-        
-    else:
-            
+    # Initialize vandermonde matrices
+    V  = np.zeros([K,N])
+    Vx = np.zeros([K,N])    
+    
+    if Prob == True:
         # Hermite (n=0)
         V[:,0]  = (2*np.pi)**(-0.25)
-        
-        if HermiteFunc == True:
-            V[:,0]  *= np.exp(-0.25*x**2)
-    
-        # Diff Hermite (n=0)
-        Vx[:,0] = -x*V[:,0]
+        Vx[:,0] = np.zeros_like(x)
     
         if N == 1:
             return V,Vx
     
         # Hermite (n=1)
         V[:,1]  = x*V[:,0]
-        
-        # Diff Hermite (n=1)
-        Vx[:,1] = 2*np.sqrt(1/2)*V[:,0]-x*V[:,1]
+        Vx[:,1] = V[:,0]
         
         if N == 2:
             return V,Vx
         
         for n in range(1,N-1):
             
-            # Recurrence relation Hermite
+            # Recurrence relation for probabilistic Hermite polynomials
+            V[:,n+1]  = np.sqrt(1/(n+1)) * (x*V[:,n] - np.sqrt(n)*V[:,n-1])
+            
+            # Recurrence relation derivative of probabilistic Hermite polynomials
+            Vx[:,n+1] = np.sqrt(n+1)*V[:,n]
+    
+        # Convert Hermite polynomials to Hermite functions (probabilistic version)
+        if HermiteFunc==True:
+            X = np.diag(x)
+            expX = np.diag(np.exp(-0.25*x**2))
+            V  = expX @ V
+            Vx = expX@Vx-0.5*X@V
+    
+    else:
+        # Hermite (n=0)
+        V[:,0]  = np.pi**(-0.25)
+        Vx[:,0] = np.zeros_like(x)
+
+        if N == 1:
+            return V,Vx
+
+        # Hermite (n=1)
+        V[:,1]  = np.sqrt(2)*x*V[:,0]
+        Vx[:,1] = np.sqrt(2)*np.pi**(-0.25)
+        
+        if N == 2:
+            return V,Vx
+        
+        for n in range(1,N-1):
+            
+            # Recurrence relation for physicist Hermite polynomials
             V[:,n+1]  = np.sqrt(2/(n+1)) * (x*V[:,n] - np.sqrt(n/2)*V[:,n-1])
             
-            # Recurrence relation Diff Hermite
-            Vx[:,n+1] = 2*np.sqrt((n+1)/2)*V[:,n] - x*V[:,n+1]
-        
+            # Recurrence relation derivative of physicist Hermite polynomials
+            Vx[:,n+1] = np.sqrt(2*(n+1)) * V[:,n]
+            
+        # Convert Hermite polynomials to Hermite functions (physicist version)
+        if HermiteFunc==True:
+            X = np.diag(x)
+            expX = np.diag(np.exp(-0.5*x**2))
+            V  = expX @ V
+            Vx = expX@Vx-X@V
+            
     return V,Vx
 
 
@@ -154,8 +222,8 @@ if __name__ == "__main__":
     import matplotlib.pyplot as plt
     
     N = 50
-    z,w = nodes(N)
-    V,Vz = vander(z)
+    z,w = nodes(N,Prob=True)
+    V,Vz = vander2(z,HermiteFunc=True,Prob=True)
     Vinv = np.linalg.inv(V)
     Dz =  Vz @ Vinv
     
@@ -176,12 +244,23 @@ if __name__ == "__main__":
     axes[1].plot(z,res1,".-",label=r"$\mathcal{D}_z(f \cdot g)$")
     axes[1].plot(z,res2,".-",label=r"$(\mathcal{D}_zf) \cdot g + f \cdot (\mathcal{D}_zg)$")
     axes[1].plot(z,dfg,"--",label=r"$ \frac{\partial}{\partial z} fg $")
+    axes[1].set_ylim([-0.65,0.65])
     axes[1].legend()
     
     plt.tight_layout()
     plt.show()
     
-    
+    # Example usage
+    from numpy.polynomial.hermite import hermgauss
+    N = 50
+    nodes1, weights1  = nodes(N)
+    nodes2, weights2 = hermgauss(N)
+
+    err1 = np.max(np.abs(nodes1 - nodes2))
+    err2 = np.max(np.abs(weights1 - weights2))
+
+    print(err1)
+    print(err2)
     
     
     

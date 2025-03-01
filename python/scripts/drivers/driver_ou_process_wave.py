@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from src.hermite import nodes,vander
+from src.hermite import nodes,vander2
 from src.ivp_solver import ivp_solver, fun_wave, Jac_wave
 from scripts.systems.ou_process import a,D,dadx,dDdx
 from scipy.stats import norm
@@ -12,8 +12,8 @@ Diffusion: D = p3**2/2
 """
 
 N = 32
-z,w = nodes(N)
-V,Vz = vander(z)
+z,w = nodes(N,Prob=True)
+V,Vz = vander2(z,Prob=True)
 
 Vinv = np.linalg.inv(V)
 
@@ -33,11 +33,8 @@ dx = x0[1] - x0[0]
 y0 = np.zeros(N+2)
 y0[0]  = np.sum(x0*u0*dx) 
 y0[1]  = np.sqrt(np.sum((x0-y0[0])**2*u0*dx)) 
-y0[2:] = y0[1]*norm.pdf(y0[1]*z+y0[0],loc,scale=1)
+y0[2:] = np.sqrt(y0[1]*norm.pdf(y0[1]*z+y0[0],loc,scale=1))
 
-
-
-#%%
 
 tspan=[t0, tf]
 p1 = (z, Dz, Dz2, Mz, a, D, p)
@@ -46,9 +43,9 @@ res = ivp_solver(fun_wave, Jac_wave, tspan, y0, pfun=p1, pjac=p2, newton_tol=1e-
 
 mf = res['y'][0]
 sf = res['y'][1]
-wf = res['y'][2:]
+bf = res['y'][2:]
 xf = sf*z+mf
-uf = wf/sf
+uf = bf*bf/sf
 
 x = np.linspace(np.min(xf),np.max(xf),100)
 plt.figure()
