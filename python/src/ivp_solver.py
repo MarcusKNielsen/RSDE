@@ -105,7 +105,7 @@ def ivp_solver(fun, jac, tspan, y0, **options):
     pfun = options.get("pfun", ())
     pjac = options.get("pjac", ())
     newton_tol = options.get("newton_tol", 1e-6)
-    newton_maxiter = options.get("newton_maxiter", 25)
+    newton_maxiter = options.get("newton_maxiter", 100)
 
     res = dict()
     res['nfev'] = 0
@@ -259,7 +259,6 @@ def fun_wave(t,y,z,Dz,Dz2,M,a,D,p):
     f[0]  = R
     f[1]  = Q
     f[2:] = (1/(2*s))*Dz@((Q*z+R)*Psi - G)
-
     
     return f
 
@@ -277,9 +276,10 @@ def Jac_wave(t, y, z, Dz, M, a, D, dadx, dDdx, p):
     G  = a(t,x,p) * Psi - (2*D(t,x,p) / s) * DzPsi
     PsiM  = Psi @ M
     zPsiM = (z*Psi) @ M
+    MG = M@G 
     R  = PsiM @ G
     Q  = zPsiM @ G
-    S  = (1/(2*s)) * Dz @ ((Q*z+R*e)*Psi) - G
+    S  = (1/(2*s)) * Dz @ ((Q*z+R*e)*Psi - G)
     
     # Compute derivatives
     dGdmu = dadx(t,x,p) * Psi - (2/s) * dDdx(t,x,p) * DzPsi
@@ -297,10 +297,10 @@ def Jac_wave(t, y, z, Dz, M, a, D, dadx, dDdx, p):
     dSds = dSds.reshape(len(z), 1)  # (N,1)
 
     dGdPsi = np.diag(a(t,x,p)) - (2/s) * (np.diag(D(t,x,p)) @ Dz)
-    dRdPsi =  PsiM @ dGdPsi  # (1,N)
-    dQdPsi = zPsiM @ dGdPsi  # (1,N)
+    dRdPsi =  PsiM @ dGdPsi + (MG).T    # (1,N)
+    dQdPsi = zPsiM @ dGdPsi + (z*MG).T  # (1,N)
 
-    PsidRdPsi  = np.outer(Psi, dRdPsi)  # (N,N)
+    PsidRdPsi  = np.outer(Psi, dRdPsi)      # (N,N)
     zPsidQdPsi = np.outer((z*Psi), dQdPsi)  # (N,N)
     
     RI = np.diag(R*e)  # (N,N)
@@ -309,7 +309,7 @@ def Jac_wave(t, y, z, Dz, M, a, D, dadx, dDdx, p):
     dSdPsi = (1/(2*s)) * Dz@(QZ + zPsidQdPsi + RI + PsidRdPsi - dGdPsi) 
     
     # reshape stuff
-    dRdmu = np.array([[PsiM @ dGdmu]])   # (1,1)
+    dRdmu = np.array([[PsiM  @ dGdmu]])  # (1,1)
     dQdmu = np.array([[zPsiM @ dGdmu]])  # (1,1)
     dRds  = np.array([[ PsiM @ dGds]])   # (1,1)
     dQds  = np.array([[zPsiM @ dGds]])   # (1,1)

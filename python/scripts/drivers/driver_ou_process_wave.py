@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from src.hermite import nodes,vander2
+from src.hermite import nodes,vander
 from src.ivp_solver import ivp_solver, fun_wave, Jac_wave
 from scripts.systems.ou_process import a,D,dadx,dDdx
 from scipy.stats import norm
@@ -13,7 +13,7 @@ Diffusion: D = p3**2/2
 
 N = 32
 z,w = nodes(N,Prob=True)
-V,Vz = vander2(z,Prob=True)
+V,Vz = vander(z,Prob=True)
 
 Vinv = np.linalg.inv(V)
 

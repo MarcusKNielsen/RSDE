@@ -4,6 +4,7 @@ from src.hermite import nodes,vander
 from src.ivp_solver import ivp_solver, fun, Jac
 from scripts.systems.bm_drift import a,D,dadx,dDdx
 
+
 """
 Brownian Motion with Drift
 dXt = p1*dt+p2*dBt
@@ -23,7 +24,7 @@ Dz2 = Dz@Dz
 Mz = (Vinv.T @ Vinv).T
 
 t0 = 10.0
-tf = 100.0
+tf = 10.000000000001
 p = np.array([1.0,1.0])
 
 # initial condition (skew-gauss)
@@ -35,7 +36,6 @@ y0 = np.zeros(N+2)
 y0[0]  = np.sum(x0*u0*dx) 
 y0[1]  = np.sqrt(np.sum((x0-y0[0])**2*u0*dx)) 
 y0[2:] = y0[1]*gauss(t0,y0[1]*z+y0[0],p[0],p[1]**2/2,loc)
-
 
 tspan=[t0, tf]
 p1 = (z, Dz, Dz2, Mz, a, D, p)

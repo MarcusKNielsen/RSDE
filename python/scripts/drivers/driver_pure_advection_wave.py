@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from src.hermite import nodes,vander2
+from src.hermite import nodes,vander
 from src.ivp_solver import ivp_solver, fun_wave, Jac_wave
 from scripts.systems.bm_drift import a,D,dadx,dDdx
 from scipy.stats import norm
@@ -8,7 +8,7 @@ from scipy.stats import norm
 
 N = 32
 z,w = nodes(N,Prob=True)
-V,Vz = vander2(z,Prob=True)
+V,Vz = vander(z,Prob=True)
 
 Vinv = np.linalg.inv(V)
 
@@ -50,7 +50,6 @@ plt.plot(x0,u0,label=r"$u(x,t_0)$")
 plt.plot(x,norm.pdf(x,advec*tf,s0),label="analytical")
 plt.plot(xf,uf,".",label=r"$u(x,t_f)$")
 plt.xlabel("x: space")
-plt.title("Initial condition and stationary distribution")
 plt.legend()
 plt.tight_layout()
 plt.show()
