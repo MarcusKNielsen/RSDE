@@ -23,7 +23,7 @@ data = pd.read_csv(file_path, dtype={
     "player1won": np.int8
 })
 
-data = data[:50]
+#data = data[:50]
 
 """
 Define likelihood
@@ -48,9 +48,10 @@ def likelihood(x1,x2,y):
 Setup Filter
 """
 
-from src.hermite import nodes,vander,hermite_weight_matrix
-from src.ivp_solver import ivp_solver, fun, Jac
+from src.hermite import nodes,vander
+from src.ivp_solver import fun_wave, Jac_wave
 from scripts.systems.ou_process import a,D,dadx,dDdx
+from scipy.integrate import solve_ivp
 
 """
 Ornstein–Uhlenbeck process
@@ -59,22 +60,19 @@ Diffusion: D = p3**2/2
 """
 
 # Initialize grid and matrices
-N = 24
-z,w = nodes(N)
+N = 32
+z,w = nodes(N,Prob=True)
 
 # Matrices based on Hermite Functions
-V,Vz = vander(z)
+V,Vz = vander(z,Prob=True)
 Vinv = np.linalg.inv(V)
 Mz = (Vinv.T @ Vinv).T
 Dz = Vz @ Vinv
 Dz2 = Dz@Dz
 
 # Matrices based on Hermite polynomials
-VH,_ = vander(z,HermiteFunc=False) 
+VH,_ = vander(z,HermiteFunc=False,Prob=True) 
 VHinv = np.linalg.inv(VH)
-W = hermite_weight_matrix(N,N)
-VF = np.diag(np.exp(-z**2)) @ VH
-VFinv = np.linalg.inv(VF)
 
 # setup parameters
 p = np.array([1.0,0.0,np.sqrt(2)])
@@ -83,10 +81,11 @@ p2 = (z, Dz, Mz, a, D, dadx, dDdx, p)
 
 # initial condition
 initial_condition = np.zeros(N+2)
-initial_condition[1] = 1.0
-what = np.zeros(N)
-what[0] = 1/(np.sqrt(2*np.pi) * (np.pi)**(-0.25))
-initial_condition[2:] = V@what
+initial_condition[1] = np.sqrt(2.0)
+bhat = np.zeros(N)
+bhat[0] = 1
+initial_condition[2:] = V@bhat
+state = initial_condition.copy()
 
 
 """
@@ -130,15 +129,14 @@ for match_idx, match_ in enumerate(data.itertuples(index=False)):
     tf = match_.time
     
     if match_num_player1 != 0:
-        tspan=[t1, tf]
-        res1 = ivp_solver(fun, Jac, tspan, y1, pfun=p1, pjac=p2)
-        y1 = res1['y']
+        tspan=[t1, tf]      
+        res1 = solve_ivp(fun_wave, tspan, y1, args=(p1))
+        y1 = res1['y'][:,-1]
     
     if match_num_player2 != 0:
         tspan=[t2, tf]
-        res2 = ivp_solver(fun, Jac, tspan, y2, pfun=p1, pjac=p2)
-        y2 = res2['y']
-        
+        res2 = solve_ivp(fun_wave, tspan, y2, args=(p1))
+        y2 = res2['y'][:,-1]
     
     """
     Perform data update
@@ -146,11 +144,13 @@ for match_idx, match_ in enumerate(data.itertuples(index=False)):
     # Extract mean, standard deviation and solution
     m1 = y1[0]
     s1 = y1[1]
-    w1 = y1[2:]
+    b1 = state[2:]
+    w1 = b1*b1
 
     m2 = y2[0]
     s2 = y2[1]
-    w2 = y2[2:]
+    b2 = state[2:]
+    w2 = b2*b2
     
     # Construct grids
     x1 = s1*z+m1
@@ -164,8 +164,8 @@ for match_idx, match_ in enumerate(data.itertuples(index=False)):
     like = likelihood(x1,x2,outcome)
     
     # Compute marginal state likelihoods
-    like2 = (VFinv @ w1).T @ (VHinv @ like)   # dx1 integral
-    like1 = (VFinv @ w2).T @ (VHinv @ like.T) # dx2 integral
+    like1 = (Vinv @ w1).T @ (VHinv @ like)   # dx1 integral
+    like2 = (Vinv @ w2).T @ (VHinv @ like.T) # dx2 integral
     
     # Compute posterior using Bayes rule
     u1 = like1*(w1/s1)
@@ -186,24 +186,24 @@ for match_idx, match_ in enumerate(data.itertuples(index=False)):
     z2 = (x2-m2)/s2
     
     # Construct Vandermonde matrices for interpolation
-    V1,_ = vander(z1)
-    V2,_ = vander(z2)
+    V1,_ = vander(z1,Prob=True)
+    V2,_ = vander(z2,Prob=True)
     
     V1inv = np.linalg.inv(V1)
     V2inv = np.linalg.inv(V2)
     
     # Compute w on original z grid via interpolation
-    w1 = s1*(V @ V1inv @ u1)
-    w2 = s2*(V @ V2inv @ u2)
+    b1 = V @ V1inv @ np.sqrt(s1*u1)
+    b2 = V @ V2inv @ np.sqrt(s2*u2)
     
     # update state vectors
     y1[0]  = m1
     y1[1]  = s1
-    y1[2:] = w1
+    y1[2:] = b1
 
     y2[0]  = m2
     y2[1]  = s2
-    y2[2:] = w2
+    y2[2:] = b2
     
     player_info.players[match_.player1].data_matrix[match_num_player1] = y1
     player_info.players[match_.player2].data_matrix[match_num_player2] = y2
@@ -268,13 +268,13 @@ fig,ax = plt.subplots(1,2,figsize=(10,4))
 
 T,X = np.meshgrid(t,x_large)
 
-ax[0].pcolormesh(T,X,u1_large.T)
+ax[0].pcolormesh(T,X,u2_large.T)
 ax[0].plot(sim_data.time,sim_data.Player0,color="red")
 ax[0].set_xlabel("t: time")
 ax[0].set_ylabel("x: space")
 ax[0].set_xlim([t[0],t[-1]])
 
-ax[1].pcolormesh(T,X,u2_large.T)
+ax[1].pcolormesh(T,X,u1_large.T)
 ax[1].plot(sim_data.time,sim_data.Player1,color="red")
 ax[1].set_xlabel("t: time")
 ax[1].set_ylabel("x: space")

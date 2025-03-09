@@ -10,10 +10,10 @@ dt = 0.001
 X0 = 0
 
 # Parameters
-A = -2
+A = -1
 G = np.sqrt(2)
 C = 1
-D = 0.4
+D = 2.0
 
 def f(t, X):
     return A*X
@@ -28,8 +28,8 @@ seed = 1
 t, X = simulate_sde(num_of_simulations, tf, dt, X0, f, g, seed)
 X = X[:,0]
 
-tm = t[::100]
-xm = X[::100]
+tm = t[::25]
+xm = X[::25]
 
 N = len(tm)
 

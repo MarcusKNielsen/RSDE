@@ -35,7 +35,7 @@ Diffusion: D = p3**2/2
 """
 
 # Initialize grid and matrices
-N = 32
+N = 16
 z,w = nodes(N,Prob=True)
 
 # Matrices based on Hermite Functions
@@ -162,14 +162,14 @@ plt.show()
     
 #%%
 
-# x_arr = res[:,1]*z[:,np.newaxis] + res[:,0]
+x_arr = res[:,1]*z[:,np.newaxis] + res[:,0]
 
-# plt.figure()
-# plt.plot(tm,x_arr.T,".",color="black",markersize=2)
-# plt.xlabel("t: time")
-# plt.xlabel("x: space")
-# plt.title("Movement of grid points")
-# plt.show()
+plt.figure()
+plt.plot(tm,x_arr.T,".",color="black",markersize=2)
+plt.xlabel("t: time")
+plt.xlabel("x: space")
+plt.title("Movement of grid points")
+plt.show()
     
     
     
