@@ -36,7 +36,7 @@ G = p_data.G[0]
 C = p_data.C[0]
 D = p_data.D[0]
 
-state = np.array([0.0,100.0])
+state = np.array([0.0,2.0])
 tnow = 0.0
 
 # define results array
@@ -127,11 +127,12 @@ X = sim_data.X.to_numpy()
 plt.figure()
 plt.plot(t,X)
 plt.plot(tm,ym,".")
-plt.plot(tm,res[:,0],".")
-plt.plot(res_exd[:,0],res_exd[:,1])
+plt.plot(tm,res[:,0],color="red")
+#plt.plot(res_exd[:,0],res_exd[:,1],color="red")
 plt.xlabel("t: time")
 plt.ylabel(r"$X_t$: state")
 plt.grid(True)
+plt.title("Kalman Filter")
 plt.show()
 
 #%%
@@ -139,29 +140,29 @@ plt.show()
 """
 Plot the full evolution of density
 """
-import scipy as sp
+# import scipy as sp
 
 
-x_grid = np.linspace(-3,3,200)
-t_grid = res_exd[:,0]
+# x_grid = np.linspace(-3,3,200)
+# t_grid = res_exd[:,0]
 
-T_grid,X_grid = np.meshgrid(t_grid,x_grid)
+# T_grid,X_grid = np.meshgrid(t_grid,x_grid)
 
-U = np.zeros_like(X_grid)
+# U = np.zeros_like(X_grid)
 
-for idx in range(len(t_grid)):
-    U[:,idx] = sp.stats.norm.pdf(x_grid,res_exd[idx,1],np.sqrt(res_exd[idx,2]))
+# for idx in range(len(t_grid)):
+#     U[:,idx] = sp.stats.norm.pdf(x_grid,res_exd[idx,1],np.sqrt(res_exd[idx,2]))
 
 
-plt.figure(figsize=(12,4))
-c = plt.pcolormesh(T_grid,X_grid,U)
-plt.colorbar(c)
-plt.plot(t,X,color="red",linewidth=1.0)
-plt.xlim([tm[0],tm[-1]])
-plt.xlabel("t: time")
-plt.ylabel(r"$X_t$: state")
-plt.tight_layout()
-plt.show()
+# plt.figure(figsize=(12,4))
+# c = plt.pcolormesh(T_grid,X_grid,U)
+# plt.colorbar(c)
+# plt.plot(t,X,color="red",linewidth=1.0)
+# plt.xlim([tm[0],tm[-1]])
+# plt.xlabel("t: time")
+# plt.ylabel(r"$X_t$: state")
+# plt.tight_layout()
+# plt.show()
 
 
 

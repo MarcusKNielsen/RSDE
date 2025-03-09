@@ -11,7 +11,7 @@ dXt = p1(p2-Xt)*dt+p3*dBt
 Diffusion: D = p3**2/2
 """
 
-N = 32
+N = 16
 z,w = nodes(N,Prob=True)
 V,Vz = vander(z,Prob=True)
 
@@ -57,6 +57,45 @@ plt.legend()
 plt.tight_layout()
 plt.show()
 
+#%%
 
+from scipy.optimize import approx_fprime
+
+def compute_jacobian(fun, t, y, z, Dz, Dz2, M, a, D, p):
+    """
+    Computes the Jacobian of the function `fun` with respect to y using finite differences.
+    """
+    
+    epsilon=1e-8
+    
+    
+    def wrapped_fun(y_flat):
+        y_vec = y_flat.reshape(y.shape)
+        return fun(t, y_vec, z, Dz, Dz2, M, a, D, p).flatten()
+    
+    jacobian = approx_fprime(y.flatten(), wrapped_fun, epsilon)
+    return jacobian.reshape(y.size, y.size)
+
+J = Jac_wave(res['t'], res['y'], *p2)
+J_test = compute_jacobian(fun_wave, res['t'], res['y'], *p1)
+err_jac = J - J_test
+print(f"jacobian error = {np.max(np.abs(err_jac))}")
+
+eigs = np.linalg.eigvals(J)
+Re = np.real(eigs)
+Im = np.imag(eigs)
+
+eigs_test = np.linalg.eigvals(J_test)
+Re_test = np.real(eigs_test)
+Im_test = np.imag(eigs_test)
+
+plt.figure()
+plt.plot(Re,Im,".",label="analytical")
+plt.plot(Re_test,Im_test,".",label="finite difference")
+plt.grid(True)
+plt.xlabel("Real Part")
+plt.ylabel("Imaginary Part")
+plt.legend()
+plt.show()
 
 

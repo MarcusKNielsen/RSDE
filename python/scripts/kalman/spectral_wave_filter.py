@@ -23,8 +23,8 @@ def likelihood(x,y,C,D):
 Setup Initial Conditions and Parameters
 """
 
-from src.hermite import nodes,vander,hermite_weight_matrix
-from src.ivp_solver import ivp_solver, fun, Jac
+from src.hermite import nodes,vander
+from src.ivp_solver import ivp_solver, fun_wave, Jac_wave
 from scripts.systems.ou_process import a,D,dadx,dDdx
 
 """
@@ -35,21 +35,14 @@ Diffusion: D = p3**2/2
 
 # Initialize grid and matrices
 N = 32
-z,w = nodes(N)
+z,w = nodes(N,Prob=True)
 
 # Matrices based on Hermite Functions
-V,Vz = vander(z)
+V,Vz = vander(z,Prob=True)
 Vinv = np.linalg.inv(V)
 Mz = (Vinv.T @ Vinv).T
 Dz = Vz @ Vinv
 Dz2 = Dz@Dz
-
-# Matrices based on Hermite polynomials
-VH,_ = vander(z,HermiteFunc=False) 
-VHinv = np.linalg.inv(VH)
-W = hermite_weight_matrix(N,N)
-VF = np.diag(np.exp(-z**2)) @ VH
-VFinv = np.linalg.inv(VF)
 
 # setup parameters
 p = np.array([1.0,0.0,np.sqrt(2)])
@@ -58,12 +51,13 @@ p2 = (z, Dz, Mz, a, D, dadx, dDdx, p)
 
 # initial condition
 initial_condition = np.zeros(N+2)
-initial_condition[1] = 4.0
-what = np.zeros(N)
-what[0] = 1/(np.sqrt(2*np.pi) * (np.pi)**(-0.25))
-initial_condition[2:] = V@what
+initial_condition[1] = 2.0
+bhat = np.zeros(N)
+bhat[0] = 1
+initial_condition[2:] = V@bhat
 state = initial_condition.copy()
 
+#%%
 
 kalman_data_parameters_path = "/home/max/Documents/DTU/MasterThesis/RSDE/data/kalman_data_parameters.csv"
 p_data = pd.read_csv(kalman_data_parameters_path)
@@ -91,7 +85,7 @@ for idx, measurement in enumerate(data.itertuples(index=False)):
     tspan = [tnow,tnxt]
     
     # Solve ODE system
-    sol = ivp_solver(fun, Jac, tspan, state, pfun=p1, pjac=p2)
+    sol = ivp_solver(fun_wave, Jac_wave, tspan, state, pfun=p1, pjac=p2)
     state = sol['y']
     
     # Extract time
@@ -104,7 +98,8 @@ for idx, measurement in enumerate(data.itertuples(index=False)):
     # Extract mean, standard deviation and solution
     m = state[0]
     s = state[1]
-    w = state[2:]
+    b = state[2:]
+    w = b*b
     
     # Construct grids
     x = s*z+m
@@ -124,20 +119,21 @@ for idx, measurement in enumerate(data.itertuples(index=False)):
     znew = (x-m)/s
 
     # Construct Vandermonde matrices for interpolation
-    Vnew,_ = vander(znew)
-    
+    Vnew,_ = vander(znew,Prob=True)
     Vnewinv = np.linalg.inv(Vnew)
     
     # Compute w on original z grid via interpolation
-    w = s*(V @ Vnewinv @ u)
+    b = V @ Vnewinv @ np.sqrt(s*u)
     
     # update state vectors
     state[0]  = m
     state[1]  = s
-    state[2:] = w
+    state[2:] = b
 
     # update result array
     res[idx] = state
+    
+    print(idx)
     
 
 #%%

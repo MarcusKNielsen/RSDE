@@ -6,7 +6,7 @@ from scripts.systems.bm_drift import a,D,dadx,dDdx
 from scipy.stats import norm
 
 
-N = 32
+N = 16
 z,w = nodes(N,Prob=True)
 V,Vz = vander(z,Prob=True)
 
@@ -69,7 +69,8 @@ def compute_jacobian(fun, t, y, z, Dz, Dz2, M, a, D, p):
     Computes the Jacobian of the function `fun` with respect to y using finite differences.
     """
     
-    epsilon=1e-10
+    epsilon=1e-8
+    
     
     def wrapped_fun(y_flat):
         y_vec = y_flat.reshape(y.shape)
@@ -80,16 +81,22 @@ def compute_jacobian(fun, t, y, z, Dz, Dz2, M, a, D, p):
 
 J = Jac_wave(res['t'], res['y'], *p2)
 J_test = compute_jacobian(fun_wave, res['t'], res['y'], *p1)
-err_jac = np.max(np.abs(J - J_test))
-print(err_jac)
+err_jac = J - J_test
+print(f"jacobian error = {np.max(np.abs(err_jac))}")
 
-J = Jac_wave(res['t'], res['y'], *p2)
 eigs = np.linalg.eigvals(J)
 Re = np.real(eigs)
 Im = np.imag(eigs)
+
+eigs_test = np.linalg.eigvals(J_test)
+Re_test = np.real(eigs_test)
+Im_test = np.imag(eigs_test)
+
 plt.figure()
-plt.plot(Re,Im,".")
+plt.plot(Re,Im,".",label="analytical")
+plt.plot(Re_test,Im_test,".",label="finite difference")
 plt.grid(True)
 plt.xlabel("Real Part")
 plt.ylabel("Imaginary Part")
+plt.legend()
 plt.show()

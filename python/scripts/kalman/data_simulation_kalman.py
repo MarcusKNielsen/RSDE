@@ -13,7 +13,7 @@ X0 = 0
 A = -2
 G = np.sqrt(2)
 C = 1
-D = 0.5
+D = 0.4
 
 def f(t, X):
     return A*X

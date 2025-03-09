@@ -13,7 +13,7 @@ def gbm_pdf(x,t,x0,p1,p2):
     return np.exp(-(np.log(x) - np.log(x0) - (p1-0.5*p2**2)*t)**2/(2*p2**2*t))/(x*p2*np.sqrt(2*np.pi*t))
 
 
-N = 32
+N = 16
 z,w = nodes(N,Prob=True)
 V,Vz = vander(z,Prob=True)
 Vinv = np.linalg.inv(V)
@@ -22,7 +22,7 @@ Dz2 = Dz@Dz
 Mz = (Vinv.T @ Vinv).T
 
 t0 = 0.1
-tf = t0 + 1e-16
+tf = t0 + 1e-9
 p = np.array([2.1,0.1])
 
 loc = 5
@@ -33,7 +33,6 @@ y0 = np.zeros(N+2)
 y0[0]  = np.sum(x0*u0*dx) 
 y0[1]  = np.sqrt(np.sum((x0-y0[0])**2*u0*dx)) 
 y0[2:] = np.sqrt(y0[1]*gbm_pdf(y0[1]*z+y0[0],t0,loc,p[0],p[1]))
-plt.plot(x0,u0)
 
 tspan=[t0, tf]
 p1 = (z, Dz, Dz2, Mz, a, D, p)
@@ -65,21 +64,6 @@ plt.show()
 
 
 
-def plot_eigs(eigs,title="default"):
-    Re = np.real(eigs)
-    Im = np.imag(eigs)
-    plt.figure()
-    plt.plot(Re,Im,".")
-    plt.vlines(0, np.min(Im), np.max(Im), linestyle = "--", color="red")
-    plt.title(title)
-    plt.grid(True)
-    plt.xlabel("Real Part")
-    plt.ylabel("Imaginary Part")
-    plt.show()
-    print(f"max real eig = {Re.max()}")
-
-
-
 from scipy.optimize import approx_fprime
 
 def compute_jacobian(fun, t, y, z, Dz, Dz2, M, a, D, p):
@@ -87,7 +71,8 @@ def compute_jacobian(fun, t, y, z, Dz, Dz2, M, a, D, p):
     Computes the Jacobian of the function `fun` with respect to y using finite differences.
     """
     
-    epsilon=1e-10
+    epsilon=1e-8
+    
     
     def wrapped_fun(y_flat):
         y_vec = y_flat.reshape(y.shape)
@@ -98,12 +83,24 @@ def compute_jacobian(fun, t, y, z, Dz, Dz2, M, a, D, p):
 
 J = Jac_wave(res['t'], res['y'], *p2)
 J_test = compute_jacobian(fun_wave, res['t'], res['y'], *p1)
+err_jac = J - J_test
+print(f"jacobian error = {np.max(np.abs(err_jac))}")
 
-dJ = np.abs(J - J_test)<1e-3
+eigs = np.linalg.eigvals(J)
+Re = np.real(eigs)
+Im = np.imag(eigs)
 
-J_eigs = np.linalg.eigvals(J)
-plot_eigs(J_eigs,"analytical")
-J_test_eigs = np.linalg.eigvals(J_test)
-plot_eigs(J_test_eigs,"finite difference")
+eigs_test = np.linalg.eigvals(J_test)
+Re_test = np.real(eigs_test)
+Im_test = np.imag(eigs_test)
+
+plt.figure()
+plt.plot(Re,Im,".",label="analytical")
+plt.plot(Re_test,Im_test,".",label="finite difference")
+plt.grid(True)
+plt.xlabel("Real Part")
+plt.ylabel("Imaginary Part")
+plt.legend()
+plt.show()
 
 

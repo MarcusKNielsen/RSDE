@@ -46,6 +46,7 @@ method = "RK45"
 #method = "LSODA"
 #method = "RK23"
 #method = "DOP853"
+#method = "Radau"
 
 for idx,N in enumerate(Nlist):
 

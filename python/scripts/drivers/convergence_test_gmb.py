@@ -39,11 +39,12 @@ errors = np.zeros([len(Nlist),2])
 
 Nsigns = np.zeros([len(Nlist),2])
 
-use_scipy = True
+use_scipy = False
 method = "RK45"
 #method = "LSODA"
 #method = "RK23"
 #method = "DOP853"
+#method = "Radau"
 
 for idx,N in enumerate(Nlist):
 

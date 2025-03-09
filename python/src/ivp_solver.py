@@ -34,13 +34,13 @@ def runge_kutta_update(fun, jac, xn, tn, h, k3, pfun, pjac, newton_tol, newton_m
     dt = a22 * h
     c  = xn + a21 * h * k1
 
-    X2 = newtons_method(fun, jac, T2, dt, xinit, c, newton_tol, newton_tol, pfun, pjac, res)
+    X2 = newtons_method(fun, jac, T2, dt, xinit, c, newton_tol, newton_maxiter, pfun, pjac, res)
     k2 = fun(T2, X2, *pfun)
     
     dt = a33 * h
     c  = xn + a31 * h * k1 + a32 * h * k2
 
-    X3 = newtons_method(fun, jac, T3, dt, xinit, c, newton_tol, newton_tol, pfun, pjac, res)
+    X3 = newtons_method(fun, jac, T3, dt, xinit, c, newton_tol, newton_maxiter, pfun, pjac, res)
     k3 = fun(T3, X3, *pfun)
     
     xnxt = X3
@@ -249,19 +249,23 @@ def fun_wave(t,y,z,Dz,Dz2,M,a,D,p):
     
     f = np.zeros_like(y)
     x = s*z+mu
+    e = np.ones_like(z)
     
     DzPsi = Dz@Psi
+    Psi_reg = np.sign(Psi) * np.maximum(np.abs(Psi),1e-15)
+    Psi_inv_DzPsi = DzPsi/Psi_reg
     G  = a(t,x,p)*Psi - (2*D(t,x,p)/s)*(DzPsi)
     MG = M@G
     R  = Psi@MG
     Q  = (z*Psi)@MG
+    J  = (Q*z+R*e)*Psi - G
+    V = Psi_inv_DzPsi * J
     
     f[0]  = R
     f[1]  = Q
-    f[2:] = (1/(2*s))*Dz@((Q*z+R)*Psi - G)
+    f[2:] = (1/(2*s))*(Dz@J + V)
     
     return f
-
 
 def Jac_wave(t, y, z, Dz, M, a, D, dadx, dDdx, p):
     
@@ -272,28 +276,34 @@ def Jac_wave(t, y, z, Dz, M, a, D, dadx, dDdx, p):
     x = s*z+mu
     e = np.ones_like(z)
 
-    DzPsi = Dz @ Psi
+    DzPsi = Dz@Psi
+    Psi_reg = np.sign(Psi) * np.maximum(np.abs(Psi),1e-15)
+    Psi_inv_DzPsi = DzPsi / Psi_reg
     G  = a(t,x,p) * Psi - (2*D(t,x,p) / s) * DzPsi
     PsiM  = Psi @ M
     zPsiM = (z*Psi) @ M
     MG = M@G 
     R  = PsiM @ G
     Q  = zPsiM @ G
-    S  = (1/(2*s)) * Dz @ ((Q*z+R*e)*Psi - G)
+    J  = (Q*z+R*e)*Psi - G
+    V  = Psi_inv_DzPsi * J
+    S  = (1/(2*s)) * (Dz@J + V)
     
     # Compute derivatives
     dGdmu = dadx(t,x,p) * Psi - (2/s) * dDdx(t,x,p) * DzPsi
     dRdmu = PsiM @ dGdmu
     dQdmu = zPsiM @ dGdmu
     dJdmu = (dQdmu*z + dRdmu*e)*Psi - dGdmu
-    dSdmu = (1/(2*s)) * Dz @ dJdmu
+    dVdmu = Psi_inv_DzPsi * dJdmu
+    dSdmu = (1/(2*s)) * (Dz@dJdmu + dVdmu)
     dSdmu = dSdmu.reshape(len(z), 1)  # (N,1)
 
     dGds = dadx(t,x,p) * z * Psi - 2*(-D(t,x,p) / s**2 + (1/s) * dDdx(t,x,p) * z) * DzPsi
     dRds = PsiM @ dGds
     dQds = zPsiM @ dGds
     dJds = (dQds*z + dRds*e)*Psi - dGds
-    dSds = (-1/s)*S + (1/(2*s))*Dz@dJds
+    dVds = Psi_inv_DzPsi * dJds
+    dSds = (-1/s)*S + (1/(2*s))*(Dz@dJds + dVds)
     dSds = dSds.reshape(len(z), 1)  # (N,1)
 
     dGdPsi = np.diag(a(t,x,p)) - (2/s) * (np.diag(D(t,x,p)) @ Dz)
@@ -303,10 +313,13 @@ def Jac_wave(t, y, z, Dz, M, a, D, dadx, dDdx, p):
     PsidRdPsi  = np.outer(Psi, dRdPsi)      # (N,N)
     zPsidQdPsi = np.outer((z*Psi), dQdPsi)  # (N,N)
     
-    RI = np.diag(R*e)  # (N,N)
-    QZ = np.diag(Q*z)  # (N,N)
+    RI   = np.diag(R*e)    # (N,N)
+    QZ   = np.diag(Q*z)    # (N,N)
+    JPsi = np.diag(J/Psi)  # (N,N)
 
-    dSdPsi = (1/(2*s)) * Dz@(QZ + zPsidQdPsi + RI + PsidRdPsi - dGdPsi) 
+    dJdPsi = QZ + zPsidQdPsi + RI + PsidRdPsi - dGdPsi
+    dVdPsi = (dJdPsi - JPsi) * Psi_inv_DzPsi[:,None] + Dz * (J/Psi)[:,None]
+    dSdPsi = (1/(2*s)) * (Dz@dJdPsi + dVdPsi)
     
     # reshape stuff
     dRdmu = np.array([[PsiM  @ dGdmu]])  # (1,1)

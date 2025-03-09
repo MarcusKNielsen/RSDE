@@ -3,7 +3,6 @@ import matplotlib.pyplot as plt
 from src.hermite import nodes,vander
 from src.ivp_solver import ivp_solver, fun_wave, Jac_wave
 from scripts.systems.bm_drift import a,D,dadx,dDdx
-from scipy.integrate import solve_ivp
 
 """
 Brownian Motion with Drift
@@ -13,7 +12,7 @@ dXt = p1*dt+p2*dBt
 def gauss(t,x,a,D,loc):
     return np.exp(-(x-a*t-loc)**2/(4*D*t))/np.sqrt(4*np.pi*D*t)
 
-N = 32
+N = 16
 z,w = nodes(N,Prob=True)
 V,Vz = vander(z,Prob=True)
 
@@ -24,7 +23,7 @@ Dz2 = Dz@Dz
 Mz = (Vinv.T @ Vinv).T
 
 t0 = 10.0
-tf = 10.1
+tf = 10.0 + 10
 p = np.array([1.0,1.0])
 
 # initial condition (skew-gauss)
@@ -86,22 +85,26 @@ def compute_jacobian(fun, t, y, z, Dz, Dz2, M, a, D, p):
     jacobian = approx_fprime(y.flatten(), wrapped_fun, epsilon)
     return jacobian.reshape(y.size, y.size)
 
-J_test = compute_jacobian(fun_wave, res['t'], res['y'], *p1)
-
 J = Jac_wave(res['t'], res['y'], *p2)
 J_test = compute_jacobian(fun_wave, res['t'], res['y'], *p1)
-err_jac = np.max(np.abs(J - J_test))
-print(err_jac)
+err_jac = J - J_test
+print(f"jacobian error = {np.max(np.abs(err_jac))}")
 
-J = Jac_wave(res['t'], res['y'], *p2)
 eigs = np.linalg.eigvals(J)
 Re = np.real(eigs)
 Im = np.imag(eigs)
+
+eigs_test = np.linalg.eigvals(J_test)
+Re_test = np.real(eigs_test)
+Im_test = np.imag(eigs_test)
+
 plt.figure()
-plt.plot(Re,Im,".")
+plt.plot(Re,Im,".",label="analytical")
+plt.plot(Re_test,Im_test,".",label="finite difference")
 plt.grid(True)
 plt.xlabel("Real Part")
 plt.ylabel("Imaginary Part")
+plt.legend()
 plt.show()
 
 
