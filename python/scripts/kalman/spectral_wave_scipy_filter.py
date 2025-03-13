@@ -35,15 +35,15 @@ Diffusion: D = p3**2/2
 """
 
 # Initialize grid and matrices
-N = 16
+N = 6
 z,w = nodes(N,Prob=True)
 
 # Matrices based on Hermite Functions
 V,Vz = vander(z,Prob=True)
 Vinv = np.linalg.inv(V)
 Mz = (Vinv.T @ Vinv).T
+Mzd = np.diag(Mz) 
 Dz = Vz @ Vinv
-Dz2 = Dz@Dz
 
 # initial condition
 initial_condition = np.zeros(N+2)
@@ -68,7 +68,7 @@ tnow = 0.0
 
 # setup parameters
 p = np.array([np.abs(Ap),0.0,Gp])
-p1 = (z, Dz, Dz2, Mz, a, D, p)
+p1 = (z, Dz, Mzd, a, D, p)
 p2 = (z, Dz, Mz, a, D, dadx, dDdx, p)
 
 # define results array
@@ -151,13 +151,14 @@ t = sim_data.t.to_numpy()
 X = sim_data.X.to_numpy()
 
 plt.figure()
-plt.plot(t,X)
-plt.plot(tm,ym,".")
-plt.plot(tm,res[:,0],color="red")
+plt.plot(t,X,label="Signal")
+plt.plot(tm,ym,".",label="Data")
+plt.plot(tm,res[:,0],color="red",label="Reconstruction")
 plt.xlabel("t: time")
 plt.ylabel(r"$X_t$: state")
 plt.grid(True)
 plt.title(f"Spectral Method with N = {N}")
+plt.legend()
 plt.show()
     
 #%%

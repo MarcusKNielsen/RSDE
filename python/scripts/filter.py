@@ -42,14 +42,14 @@ def likelihood(x1,x2,y):
     Z = np.sum(P, axis=0)
     P = P / Z
     
-    return P[y+1]
+    return P[1-y]
 
 """
 Setup Filter
 """
 
 from src.hermite import nodes,vander
-from src.ivp_solver import fun_wave, Jac_wave
+from src.ivp_solver import fun_wave
 from scripts.systems.ou_process import a,D,dadx,dDdx
 from scipy.integrate import solve_ivp
 
@@ -60,32 +60,27 @@ Diffusion: D = p3**2/2
 """
 
 # Initialize grid and matrices
-N = 32
+N = 16
 z,w = nodes(N,Prob=True)
 
 # Matrices based on Hermite Functions
 V,Vz = vander(z,Prob=True)
 Vinv = np.linalg.inv(V)
-Mz = (Vinv.T @ Vinv).T
+Mz = Vinv.T @ Vinv
+Mzd = np.diag(Mz) 
 Dz = Vz @ Vinv
-Dz2 = Dz@Dz
-
-# Matrices based on Hermite polynomials
-VH,_ = vander(z,HermiteFunc=False,Prob=True) 
-VHinv = np.linalg.inv(VH)
 
 # setup parameters
-p = np.array([1.0,0.0,np.sqrt(2)])
-p1 = (z, Dz, Dz2, Mz, a, D, p)
+p = np.array([2.0,0.0,np.sqrt(2)])
+p1 = (z, Dz, Mzd, a, D, p)
 p2 = (z, Dz, Mz, a, D, dadx, dDdx, p)
 
 # initial condition
 initial_condition = np.zeros(N+2)
-initial_condition[1] = np.sqrt(2.0)
+initial_condition[1] = np.sqrt(2)
 bhat = np.zeros(N)
 bhat[0] = 1
 initial_condition[2:] = V@bhat
-state = initial_condition.copy()
 
 
 """
@@ -94,7 +89,6 @@ Setup Player info
 from scripts.player_info import PlayerInfo
 
 player_info = PlayerInfo(data, N+2)
-
 
 """
 Run filter / Loop through data
@@ -105,7 +99,7 @@ for match_idx, match_ in enumerate(data.itertuples(index=False)):
     print(match_idx)
     
     """
-    Extract relevant data
+    Extract players data
     """
     match_num_player1 = player_info.players[match_.player1].matches_played
     match_num_player2 = player_info.players[match_.player2].matches_played
@@ -119,9 +113,8 @@ for match_idx, match_ in enumerate(data.itertuples(index=False)):
     if match_num_player2 == 0:
         y2 = initial_condition.copy()
     else:
-        t2 = player_info.players[match_.player1].times[match_num_player1-1]
+        t2 = player_info.players[match_.player2].times[match_num_player2-1]
         y2 = player_info.players[match_.player2].data_matrix[match_num_player2-1]
-    
 
     """
     Perform time update
@@ -141,21 +134,20 @@ for match_idx, match_ in enumerate(data.itertuples(index=False)):
     """
     Perform data update
     """
-    # Extract mean, standard deviation and solution
+    # Extract mean, standard deviation and wave function
     m1 = y1[0]
     s1 = y1[1]
-    b1 = state[2:]
+    b1 = y1[2:]
     w1 = b1*b1
 
     m2 = y2[0]
     s2 = y2[1]
-    b2 = state[2:]
+    b2 = y1[2:]
     w2 = b2*b2
     
     # Construct grids
     x1 = s1*z+m1
     x2 = s2*z+m2
-    X1,X2 = np.meshgrid(x1,x2) # remove this when done
     
     # Extract outcome of match
     outcome = match_.player1won
@@ -164,22 +156,26 @@ for match_idx, match_ in enumerate(data.itertuples(index=False)):
     like = likelihood(x1,x2,outcome)
     
     # Compute marginal state likelihoods
-    like1 = (Vinv @ w1).T @ (VHinv @ like)   # dx1 integral
-    like2 = (Vinv @ w2).T @ (VHinv @ like.T) # dx2 integral
+    like1 = (w2*Mzd).T @ like   # dx2 integral
+    like2 = (w1*Mzd).T @ like.T # dx1 integral
     
     # Compute posterior using Bayes rule
     u1 = like1*(w1/s1)
-    u1 = u1/(s1*np.sum(Mz@u1,axis=0))
+    u1 = u1/(s1*np.sum(Mzd*u1))
 
     u2 = like2*(w2/s2)
-    u2 = u2/(s2*np.sum(Mz@u2,axis=0))
+    u2 = u2/(s2*np.sum(Mzd*u2))
+
+    # Pre compute "half" integral for reuse
+    Mu1 = Mzd*u1
+    Mu2 = Mzd*u2
 
     # Find new mean and standard deviation
-    m1 = s1*(x1@Mz@u1)
-    s1 = np.sqrt(s1*((x1-m1)**2@Mz@u1))
+    m1 = s1*(x1@Mu1)
+    s1 = np.sqrt(s1*((x1-m1)**2@Mu1))
     
-    m2 = s2*(x2@Mz@u2)
-    s2 = np.sqrt(s2*((x2-m2)**2@Mz@u2))
+    m2 = s2*(x2@Mu2)
+    s2 = np.sqrt(s2*((x2-m2)**2@Mu2))
     
     # Compute new z grids
     z1 = (x1-m1)/s1
@@ -192,9 +188,9 @@ for match_idx, match_ in enumerate(data.itertuples(index=False)):
     V1inv = np.linalg.inv(V1)
     V2inv = np.linalg.inv(V2)
     
-    # Compute w on original z grid via interpolation
-    b1 = V @ V1inv @ np.sqrt(s1*u1)
-    b2 = V @ V2inv @ np.sqrt(s2*u2)
+    # Compute wave functions on original z grid via interpolation
+    b1 = V @ (V1inv @ np.sqrt(s1*u1))
+    b2 = V @ (V2inv @ np.sqrt(s2*u2))
     
     # update state vectors
     y1[0]  = m1
@@ -211,22 +207,6 @@ for match_idx, match_ in enumerate(data.itertuples(index=False)):
     player_info.players[match_.player1].matches_played += 1
     player_info.players[match_.player2].matches_played += 1
 
-#%%
-
-import matplotlib.pyplot as plt
-
-player = 0
-
-t = player_info.players[player].times
-m = player_info.players[player].data_matrix[:,0]
-s = player_info.players[player].data_matrix[:,1]
-w = player_info.players[player].data_matrix[:,2:]
-
-# plt.figure()
-# T,Z = np.meshgrid(t,z)
-# plt.pcolormesh(T,Z,w.T)
-# plt.show()
-
 
 #%%
 
@@ -238,7 +218,8 @@ def get_density_of_player(player,player_info,x_large):
     t = player_info.players[player].times
     m = player_info.players[player].data_matrix[:,0]
     s = player_info.players[player].data_matrix[:,1]
-    w = player_info.players[player].data_matrix[:,2:]
+    b = player_info.players[player].data_matrix[:,2:]
+    w = b*b
     
     z_large = (x_large - m[:,np.newaxis])/s[:,np.newaxis]
     w_large = np.zeros([len(t),M])
@@ -249,53 +230,77 @@ def get_density_of_player(player,player_info,x_large):
     
     u_large = w_large/s[:, np.newaxis]
 
-    return u_large    
-
+    return t,u_large    
 
 
 # Read CSV into a DataFrame
 sim_data = pd.read_csv(f"{path}/sim_data.csv")
-
+N_players = sim_data.shape[1] - 1
 x_large = np.linspace(-5,5,100)
 
-player = 0
-u1_large = get_density_of_player(player,player_info,x_large)
+for player in range(N_players):
+    t,u_large = get_density_of_player(player,player_info,x_large)
+    T,X = np.meshgrid(t,x_large)
+    plt.figure()
+    plt.pcolormesh(T,X,u_large.T)
+    plt.plot(sim_data.time,sim_data.iloc[:,player+1],color="red")
+    plt.xlabel("t: time")
+    plt.ylabel("x: space")
+    plt.title(f"Player = {player}")
+    plt.xlim([t[0],t[-1]])
+    plt.tight_layout()
+    plt.show()
 
-player = 1
-u2_large = get_density_of_player(player,player_info,x_large)
 
-fig,ax = plt.subplots(1,2,figsize=(10,4))
 
-T,X = np.meshgrid(t,x_large)
+#%%
 
-ax[0].pcolormesh(T,X,u2_large.T)
-ax[0].plot(sim_data.time,sim_data.Player0,color="red")
-ax[0].set_xlabel("t: time")
-ax[0].set_ylabel("x: space")
-ax[0].set_xlim([t[0],t[-1]])
 
-ax[1].pcolormesh(T,X,u1_large.T)
-ax[1].plot(sim_data.time,sim_data.Player1,color="red")
-ax[1].set_xlabel("t: time")
-ax[1].set_ylabel("x: space")
-ax[1].set_xlim([t[0],t[-1]])
+M = 64
+zinter,_ = nodes(M)
+Vinter,_ = vander(zinter,N,Prob=True)
 
-plt.tight_layout()
+b1inter = Vinter @ Vinv @ b1
+b2inter = Vinter @ Vinv @ b2
+
+w1inter = b1inter**2
+w2inter = b2inter**2
+
+V1,_ = vander(zinter)
+V1inv = np.linalg.inv(V1)
+M1z = V1inv.T @ V1inv
+
+n = np.arange(M)
+F = V1 @ np.diag((-1j)**n) @ V1inv
+Finv = V1 @ np.diag((1j)**n) @ V1inv
+
+Fw1 = F@w1inter
+Fw2 = F@w2inter
+
+product = Fw1*Fw2
+
+w1_convolve_w2 = np.sqrt(2*np.pi)*(Finv@product).real
+
+zlarge = np.linspace(-15,15,1000)
+Vlarge,_ = vander(zlarge,N,Prob=True)
+
+b1_large = Vlarge @ (Vinv @ b1)
+b2_large = Vlarge @ (Vinv @ b2)
+
+w1_large = b1_large**2
+w2_large = b2_large**2
+
+dz = zlarge[1] - zlarge[0]
+result = dz * np.convolve(w1_large, w2_large, mode='same')
+
+plt.figure()
+plt.plot(zlarge,result,label="convolve")
+plt.plot(zinter,w1_convolve_w2,".",label="spectral")
+plt.legend()
 plt.show()
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+print(np.trapz(result, zlarge))  # Convolution method
+print(np.sum(M1z@w1_convolve_w2))  # Spectral method
 
 
 

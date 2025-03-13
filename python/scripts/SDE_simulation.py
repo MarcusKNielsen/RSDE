@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-def simulate_sde(num_simulations=5, T=1, dt=0.01, S0=None, f=None, g=None, seed=1):
+def simulate_sde(num_simulations=5, t0=0, tf=1, dt=0.01, S0=None, f=None, g=None, p=()):
     """
     Simulates a general Stochastic Differential Equation (SDE):
         dX_t = f(t, X_t) dt + g(t, X_t) dB_t
@@ -18,9 +18,9 @@ def simulate_sde(num_simulations=5, T=1, dt=0.01, S0=None, f=None, g=None, seed=
     - t: Time array.
     - S: Simulated SDE paths (shape: [num_steps, num_simulations]).
     """
-    np.random.seed(seed)  # For reproducibility
-    N = int(T / dt)  # Number of time steps
-    t = np.linspace(0, T, N)  # Time grid
+    
+    N = int(tf / dt)  # Number of time steps
+    t = np.linspace(t0, tf, N)  # Time grid
 
     # If S0 is not provided, default to ones
     if S0 is None:
@@ -38,8 +38,8 @@ def simulate_sde(num_simulations=5, T=1, dt=0.01, S0=None, f=None, g=None, seed=
         dW = np.random.randn(num_simulations) * np.sqrt(dt)  # Brownian increments
         S_prev = S[i-1, :]
         
-        drift = f(t[i-1], S_prev) * dt  # Compute drift f(t, X_t) dt
-        diffusion = g(t[i-1], S_prev) * dW  # Compute noise g(t, X_t) dB_t
+        drift = f(t[i-1], S_prev, p) * dt  # Compute drift f(t, X_t) dt
+        diffusion = g(t[i-1], S_prev, p) * dW  # Compute noise g(t, X_t) dB_t
         
         S[i, :] = S_prev + drift + diffusion  # Euler-Maruyama step
 
@@ -66,21 +66,22 @@ if __name__ == "__main__":
 
     # Example usage:
     num_simulations = 200
-    T = 5.5
+    t0 = 0.0
+    tf = 5.5
     dt = 0.001
     
     # Generate random initial values for each simulation
     S0 = np.random.normal(5.0, 0.2, num_simulations)
     
     # Define the drift and noise functions
-    def f(t, X):
+    def f(t, X, p):
         return 0.1*X
     
-    def g(t, X):
+    def g(t, X, p):
         return 0.1*X
     
     # Simulate SDE paths
-    t, S = simulate_sde(num_simulations, T, dt, S0, f, g)
+    t, S = simulate_sde(num_simulations,t0, tf, dt, S0, f, g)
     
     # Plot the results
     plot_sde(t, S)
