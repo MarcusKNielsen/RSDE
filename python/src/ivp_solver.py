@@ -154,7 +154,7 @@ dy/dt = f(t,y,p)
 
 """
 
-def fun(t,y,z,Dz,Dz2,M,a,D,p):
+def fun(t,y,z,Dz,M,a,D,p):
     
     mu = y[0]
     s  = y[1]
@@ -241,7 +241,7 @@ def Jac(t, y, z, Dz, M, a, D, dadx, dDdx, p):
 The is the system expressed in terms of the wave function
 """
 
-def fun_wave(t,y,z,Dz,Dz2,M,a,D,p):
+def fun_wave(t,y,z,Dz,Mdiag,a,D,p):
     
     mu  = y[0]  # Mean
     s   = y[1]  # Standard deviation
@@ -255,7 +255,7 @@ def fun_wave(t,y,z,Dz,Dz2,M,a,D,p):
     Psi_reg = np.sign(Psi) * np.maximum(np.abs(Psi),1e-15)
     Psi_inv_DzPsi = DzPsi/Psi_reg
     G  = a(t,x,p)*Psi - (2*D(t,x,p)/s)*(DzPsi)
-    MG = M@G
+    MG = Mdiag*G
     R  = Psi@MG
     Q  = (z*Psi)@MG
     J  = (Q*z+R*e)*Psi - G

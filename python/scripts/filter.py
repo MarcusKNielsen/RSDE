@@ -253,56 +253,6 @@ for player in range(N_players):
 
 
 
-#%%
-
-
-M = 64
-zinter,_ = nodes(M)
-Vinter,_ = vander(zinter,N,Prob=True)
-
-b1inter = Vinter @ Vinv @ b1
-b2inter = Vinter @ Vinv @ b2
-
-w1inter = b1inter**2
-w2inter = b2inter**2
-
-V1,_ = vander(zinter)
-V1inv = np.linalg.inv(V1)
-M1z = V1inv.T @ V1inv
-
-n = np.arange(M)
-F = V1 @ np.diag((-1j)**n) @ V1inv
-Finv = V1 @ np.diag((1j)**n) @ V1inv
-
-Fw1 = F@w1inter
-Fw2 = F@w2inter
-
-product = Fw1*Fw2
-
-w1_convolve_w2 = np.sqrt(2*np.pi)*(Finv@product).real
-
-zlarge = np.linspace(-15,15,1000)
-Vlarge,_ = vander(zlarge,N,Prob=True)
-
-b1_large = Vlarge @ (Vinv @ b1)
-b2_large = Vlarge @ (Vinv @ b2)
-
-w1_large = b1_large**2
-w2_large = b2_large**2
-
-dz = zlarge[1] - zlarge[0]
-result = dz * np.convolve(w1_large, w2_large, mode='same')
-
-plt.figure()
-plt.plot(zlarge,result,label="convolve")
-plt.plot(zinter,w1_convolve_w2,".",label="spectral")
-plt.legend()
-plt.show()
-
-print(np.trapz(result, zlarge))  # Convolution method
-print(np.sum(M1z@w1_convolve_w2))  # Spectral method
-
-
 
 
 
