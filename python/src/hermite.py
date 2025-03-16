@@ -126,7 +126,82 @@ def hermite_weight_matrix(N,M=None):
 
     return W
 
+def hermite_convolve(z_prob,y1,y2,V_prob,V_prob_inv):
+    
+    # Extract player information
+    m1 = y1[0]
+    s1 = y1[1]
+    b1 = y1[2:]
 
+    m2 = y2[0]
+    s2 = y2[1]
+    b2 = y2[2:]
+  
+    m = m1+m2
+    s = np.sqrt(s1**2 + s2**2)  
+  
+    # Setup grid needed for Fourier transform
+    N = z_prob.shape[0]
+    M = 128
+    z_phys,_ = nodes(M)
+    V_prob_to_phys,_ = vander(z_phys,N,Prob=True)
+    
+    # Convert from Probabilistic Hermite to Physicist Hermite representation
+    C_prob_to_phys = V_prob_to_phys @ V_prob_inv
+    
+    b1_phys = C_prob_to_phys @ b1
+    b2_phys = C_prob_to_phys @ b2
+    
+    # Compute interpolated standardized densities w1 and w2
+    w1 = b1_phys**2
+    w2 = b2_phys**2
+    
+    # Compute vandermonde matrices, based on physicist hermite, for Fourier matrix
+    V_phys,_ = vander(z_phys)
+    V_phys_inv = np.linalg.inv(V_phys)
+    
+    # Setup Fourier matrices based eigendecomposition
+    n = np.arange(M)
+    F = V_phys @ np.diag((-1j)**n) @ V_phys_inv
+    Finv = V_phys @ np.diag((1j)**n) @ V_phys_inv
+    
+    # Compute Fourier transform of w1 and w2
+    Fw1 = F@w1
+    Fw2 = F@w2
+    
+    V1eval,_ = vander(s1*z_phys,M)
+    V2eval,_ = vander(s2*z_phys,M)
+    
+    Fw1 = V1eval@V_phys_inv@Fw1
+    Fw2 = V2eval@V_phys_inv@Fw2
+    
+    # Compute product
+    product = Fw1*Fw2
+    #product = dealiased_hermite_product(z_phys,Fw1,Fw2,V_phys,V_phys_inv)
+    
+    # Compute convolution using convolution theorem
+    Fw = np.sqrt(2*np.pi)*product    
+    w = (Finv@Fw).real
+    
+    # Convert from Physicist Hermite to Probabilistic Hermite and adjust for scale
+    Veval,_ = vander(s*z_prob,M)
+    w = Veval @ V_phys_inv @ w
+    #w = s*w # not needed when we normalize
+
+    # ad hoc adjustments: remove signs and normalize
+    Mz = Vinv.T @ Vinv
+    w = np.abs(w)
+    w = w/np.sum(Mz@w)
+
+    # Init array for results
+    y = np.zeros(N+2)
+    
+    # Save all results
+    y[0]  = m
+    y[1]  = s
+    y[2:] = np.sqrt(w)
+    
+    return y
 
 if __name__ == "__main__":
     

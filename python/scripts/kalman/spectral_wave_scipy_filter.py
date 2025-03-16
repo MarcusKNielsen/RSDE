@@ -35,7 +35,7 @@ Diffusion: D = p3**2/2
 """
 
 # Initialize grid and matrices
-N = 6
+N = 8
 z,w = nodes(N,Prob=True)
 
 # Matrices based on Hermite Functions

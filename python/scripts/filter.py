@@ -60,7 +60,7 @@ Diffusion: D = p3**2/2
 """
 
 # Initialize grid and matrices
-N = 16
+N = 8
 z,w = nodes(N,Prob=True)
 
 # Matrices based on Hermite Functions
@@ -142,7 +142,7 @@ for match_idx, match_ in enumerate(data.itertuples(index=False)):
 
     m2 = y2[0]
     s2 = y2[1]
-    b2 = y1[2:]
+    b2 = y2[2:]
     w2 = b2*b2
     
     # Construct grids
