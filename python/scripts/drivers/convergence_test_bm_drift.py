@@ -55,17 +55,18 @@ for idx,N in enumerate(Nlist):
     """
     # Setup matrices based on physicist hermite functions
     Prob = False
-    z,w = nodes(N,Prob=Prob)
-    V,Vz = vander(z,Prob=Prob)
+    z,w = nodes(N,Prob=True)
+    V,Vz = vander(z,Prob=True)
     Vinv = np.linalg.inv(V)
     Dz = Vz @ Vinv
     Dz2 = Dz@Dz
-    Mz = (Vinv.T @ Vinv).T
+    Mz = Vinv.T @ Vinv
+    Mzd = np.diag(Mz) 
     
     y0 = init_cond(t0,loc,p,is_wave=False)
     
     tspan=[t0, tf]
-    p1 = (z, Dz, Dz2, Mz, a, D, p)
+    p1 = (z, Dz, Mz, a, D, p)
     p2 = (z, Dz, Mz, a, D, dadx, dDdx, p)
     
     if use_scipy == False:
@@ -97,17 +98,18 @@ for idx,N in enumerate(Nlist):
     """
     # Setup matrices based on probabilistic hermite functions
     Prob = True
-    z,w = nodes(N,Prob=Prob)
-    V,Vz = vander(z,Prob=Prob)
+    z,w = nodes(N,Prob=True)
+    V,Vz = vander(z,Prob=True)
     Vinv = np.linalg.inv(V)
     Dz = Vz @ Vinv
     Dz2 = Dz@Dz
-    Mz = (Vinv.T @ Vinv).T
+    Mz = Vinv.T @ Vinv
+    Mzd = np.diag(Mz) 
     
     y0 = init_cond(t0,loc,p,is_wave=True)
     
     tspan=[t0, tf]
-    p1 = (z, Dz, Dz2, Mz, a, D, p)
+    p1 = (z, Dz, Mzd, a, D, p)
     p2 = (z, Dz, Mz, a, D, dadx, dDdx, p)
     
     if use_scipy == False:

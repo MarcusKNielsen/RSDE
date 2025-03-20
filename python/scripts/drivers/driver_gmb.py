@@ -15,14 +15,13 @@ def analytical_solution(x,t,x0,p1,p2):
 
 
 N = 32
-z,w = nodes(N)
-V,Vz = vander(z)
-
+z,w = nodes(N,Prob=True)
+V,Vz = vander(z,Prob=True)
 Vinv = np.linalg.inv(V)
-
 Dz = Vz @ Vinv
 Dz2 = Dz@Dz
-Mz = (Vinv.T @ Vinv).T
+Mz = Vinv.T @ Vinv
+Mzd = np.diag(Mz) 
 
 t0 = 0.1
 tf = t0 + 1e-6
@@ -39,7 +38,7 @@ y0[2:] = y0[1]*analytical_solution(y0[1]*z+y0[0],t0,loc,p[0],p[1])
 plt.plot(x0,u0)
 
 tspan=[t0, tf]
-p1 = (z, Dz, Dz2, Mz, a, D, p)
+p1 = (z, Dz, Mz, a, D, p)
 p2 = (z, Dz, Mz, a, D, dadx, dDdx, p)
 res = ivp_solver(fun, Jac, tspan, y0, pfun=p1, pjac=p2, newton_tol=1e-10)
 
@@ -84,7 +83,7 @@ def plot_eigs(eigs,title="default"):
 
 from scipy.optimize import approx_fprime
 
-def compute_jacobian(fun, t, y, z, Dz, Dz2, M, a, D, p):
+def compute_jacobian(fun, t, y, p1):
     """
     Computes the Jacobian of the function `fun` with respect to y using finite differences.
     """
@@ -93,13 +92,13 @@ def compute_jacobian(fun, t, y, z, Dz, Dz2, M, a, D, p):
     
     def wrapped_fun(y_flat):
         y_vec = y_flat.reshape(y.shape)
-        return fun(t, y_vec, z, Dz, Dz2, M, a, D, p).flatten()
+        return fun(t, y_vec, *p1).flatten()
     
     jacobian = approx_fprime(y.flatten(), wrapped_fun, epsilon)
     return jacobian.reshape(y.size, y.size)
 
 J = Jac(res['t'], res['y'], *p2)
-J_test = compute_jacobian(fun, res['t'], res['y'], *p1)
+J_test = compute_jacobian(fun, res['t'], res['y'], p1)
 
 dJ = np.abs(J - J_test)<1e-3
 

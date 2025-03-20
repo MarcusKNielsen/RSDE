@@ -60,7 +60,7 @@ Diffusion: D = p3**2/2
 """
 
 # Initialize grid and matrices
-N = 8
+N = 16
 z,w = nodes(N,Prob=True)
 
 # Matrices based on Hermite Functions
@@ -252,14 +252,59 @@ for player in range(N_players):
     plt.show()
 
 
+#%%
+from src.hermite import hermite_convolve
+
+def get_diff_density_of_players(z,V,Vinv,player1,player2,player_info,x_large):
+
+    t1 = player_info.players[player1].times
+
+    t = np.zeros_like(t1)
+    data_matrix = np.zeros([len(t),len(z)+2])
+    
+    for i in range(len(t)):
+        y1 = player_info.players[player1].data_matrix[i]
+        y2 = player_info.players[player2].data_matrix[i]
+        
+        t[i] = player_info.players[0].times[i]
+        data_matrix[i] = hermite_convolve(z,y1,y2,V,Vinv,diff=True)
+    
+    
+    m = data_matrix[:,0]
+    s = data_matrix[:,1]
+    b = data_matrix[:,2:]
+    w = b*b
+    
+    z_large = (x_large - m[:,np.newaxis])/s[:,np.newaxis]
+    w_large = np.zeros([len(t),len(x_large)])
+    
+    for i in range(len(t)):
+        V_large,_ = vander(z_large[i],N)
+        w_large[i] = V_large@Vinv@w[i]
+    
+    u_large = w_large/s[:, np.newaxis]
+    
+    return t,data_matrix,u_large
+
+player1 = 0
+player2 = 1
 
 
+t,data_matrix,u_large = get_diff_density_of_players(z,V,Vinv,player1,player2,player_info,x_large)
+
+#%%
 
 
-
-
-
-
+T,X = np.meshgrid(t,x_large)
+plt.figure()
+plt.pcolormesh(T,X,u_large.T)
+plt.plot(sim_data.time,sim_data.iloc[:,1]-sim_data.iloc[:,2],color="red")
+plt.xlabel("t: time")
+plt.ylabel("x: space")
+plt.title(r"$X_t^1 - X_t^2$")
+plt.xlim([t[0],t[-1]])
+plt.tight_layout()
+plt.show()
 
 
 

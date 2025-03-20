@@ -11,19 +11,18 @@ dXt = p1*Xt*(p2-Xt)*dt+p3*Xt*dBt
 Diffusion: D(t,x) = (p3*x)**2/2
 """
 
-N = 32
-z,w = nodes(N)
-V,Vz = vander(z)
-
+N = 16
+z,w = nodes(N,Prob=True)
+V,Vz = vander(z,Prob=True)
 Vinv = np.linalg.inv(V)
-
 Dz = Vz @ Vinv
 Dz2 = Dz@Dz
-Mz = (Vinv.T @ Vinv).T
+Mz = Vinv.T @ Vinv
+Mzd = np.diag(Mz) 
 
 t0 = 0
-tf = 20
-p = np.array([0.3,15.0,0.1])
+tf = 1
+p = np.array([0.3,5.0,0.1])
 
 
 loc = 5
@@ -38,7 +37,7 @@ y0[2:] = y0[1]*norm.pdf(y0[1]*z+y0[0],loc,scale)
 
 
 tspan=[t0, tf]
-p1 = (z, Dz, Dz2, Mz, a, D, p)
+p1 = (z, Dz, Mz, a, D, p)
 p2 = (z, Dz, Mz, a, D, dadx, dDdx, p)
 res = ivp_solver(fun, Jac, tspan, y0, pfun=p1, pjac=p2, newton_tol=1e-12)
 

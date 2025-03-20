@@ -14,13 +14,14 @@ def gbm_pdf(x,t,x0,p1,p2):
     return np.exp(-(np.log(x) - np.log(x0) - (p1-0.5*p2**2)*t)**2/(2*p2**2*t))/(x*p2*np.sqrt(2*np.pi*t))
 
 
-N = 24
+N = 16
 z,w = nodes(N,Prob=True)
 V,Vz = vander(z,Prob=True)
 Vinv = np.linalg.inv(V)
 Dz = Vz @ Vinv
 Dz2 = Dz@Dz
-Mz = (Vinv.T @ Vinv).T
+Mz = Vinv.T @ Vinv
+Mzd = np.diag(Mz) 
 
 t0 = 0.1
 tf = t0 + 1.0
@@ -36,7 +37,7 @@ y0[1]  = np.sqrt(np.sum((x0-y0[0])**2*u0*dx))
 y0[2:] = np.sqrt(y0[1]*gbm_pdf(y0[1]*z+y0[0],t0,loc,p[0],p[1]))
 
 tspan=[t0, tf]
-p1 = (z, Dz, Dz2, Mz, a, D, p)
+p1 = (z, Dz, Mzd, a, D, p)
 p2 = (z, Dz, Mz, a, D, dadx, dDdx, p)
 res = solve_ivp(fun_wave, tspan, y0, args=(p1))
 

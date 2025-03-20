@@ -21,13 +21,14 @@ def cir_pdf(x,t,x0,p):
     pdf = (c / 2) * ((x / x_bar)**((q - 1) / 2)) * np.exp(-c * (x + x_bar) / 2) * iv(q-1, c * np.sqrt(x * x_bar))
     return pdf
 
-N = 50
+N = 16
 z,w = nodes(N,Prob=True)
 V,Vz = vander(z,Prob=True)
 Vinv = np.linalg.inv(V)
 Dz = Vz @ Vinv
 Dz2 = Dz@Dz
-Mz = (Vinv.T @ Vinv).T
+Mz = Vinv.T @ Vinv
+Mzd = np.diag(Mz) 
 
 t0 = 0.2
 tf = t0 + 1e-16
@@ -43,13 +44,9 @@ y0[1]  = np.sqrt(np.sum((x0-y0[0])**2*u0*dx))
 z0 = y0[1]*z+y0[0]
 y0[2:] = np.sqrt(y0[1]*cir_pdf(y0[1]*z+y0[0],t0,loc,p))
 
-plt.plot(x0,u0)
-plt.plot(z0,np.zeros_like(z0),".")
-
-#%%
 
 tspan=[t0, tf]
-p1 = (z, Dz, Dz2, Mz, a, D, p)
+p1 = (z, Dz, Mzd, a, D, p)
 p2 = (z, Dz, Mz, a, D, dadx, dDdx, p)
 res = ivp_solver(fun_wave, Jac_wave, tspan, y0, pfun=p1, pjac=p2, newton_tol=1e-10)
 
