@@ -55,11 +55,10 @@ for idx,N in enumerate(Nlist):
     """
     # Setup matrices based on physicist hermite functions
     Prob = False
-    z,w = nodes(N,Prob=True)
-    V,Vz = vander(z,Prob=True)
+    z,w = nodes(N,Prob=Prob)
+    V,Vz = vander(z,Prob=Prob)
     Vinv = np.linalg.inv(V)
     Dz = Vz @ Vinv
-    Dz2 = Dz@Dz
     Mz = Vinv.T @ Vinv
     Mzd = np.diag(Mz) 
     
@@ -98,8 +97,8 @@ for idx,N in enumerate(Nlist):
     """
     # Setup matrices based on probabilistic hermite functions
     Prob = True
-    z,w = nodes(N,Prob=True)
-    V,Vz = vander(z,Prob=True)
+    z,w = nodes(N,Prob=Prob)
+    V,Vz = vander(z,Prob=Prob)
     Vinv = np.linalg.inv(V)
     Dz = Vz @ Vinv
     Dz2 = Dz@Dz
