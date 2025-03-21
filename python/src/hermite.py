@@ -126,9 +126,12 @@ def hermite_weight_matrix(N,M=None):
 
     return W
 
-def hermite_convolve(z_prob,y1,y2,V_prob,V_prob_inv):
+def hermite_convolve(z_prob,y1,y2,V_prob,V_prob_inv,M=128,diff=False):
     
-    # Extract player information
+    # if diff true  then Y1+Y2
+    # if diff False then Y1-Y2
+    
+    # Extract player information from state vectors
     m1 = y1[0]
     s1 = y1[1]
     b1 = y1[2:]
@@ -136,13 +139,13 @@ def hermite_convolve(z_prob,y1,y2,V_prob,V_prob_inv):
     m2 = y2[0]
     s2 = y2[1]
     b2 = y2[2:]
-  
-    m = m1+m2
+    
+    # Compute mean and standard deviation of convolution
+    m = (m1+m2) if not diff else (m1-m2)
     s = np.sqrt(s1**2 + s2**2)  
   
     # Setup grid needed for Fourier transform
     N = z_prob.shape[0]
-    M = 128
     z_phys,_ = nodes(M)
     V_prob_to_phys,_ = vander(z_phys,N,Prob=True)
     
@@ -166,7 +169,7 @@ def hermite_convolve(z_prob,y1,y2,V_prob,V_prob_inv):
     Finv = V_phys @ np.diag((1j)**n) @ V_phys_inv
     
     # Compute Fourier transform of w1 and w2
-    Fw1 = F@w1
+    Fw1 = (F @ w1) if not diff else (Finv @ w1)
     Fw2 = F@w2
     
     V1eval,_ = vander(s1*z_phys,M)
@@ -177,7 +180,6 @@ def hermite_convolve(z_prob,y1,y2,V_prob,V_prob_inv):
     
     # Compute product
     product = Fw1*Fw2
-    #product = dealiased_hermite_product(z_phys,Fw1,Fw2,V_phys,V_phys_inv)
     
     # Compute convolution using convolution theorem
     Fw = np.sqrt(2*np.pi)*product    
@@ -186,12 +188,26 @@ def hermite_convolve(z_prob,y1,y2,V_prob,V_prob_inv):
     # Convert from Physicist Hermite to Probabilistic Hermite and adjust for scale
     Veval,_ = vander(s*z_prob,M)
     w = Veval @ V_phys_inv @ w
-    #w = s*w # not needed when we normalize
+    w = s*w
 
-    # ad hoc adjustments: remove signs and normalize
-    Mz = Vinv.T @ Vinv
+    # Quality control
+    Mz = V_prob_inv.T @ V_prob_inv
+    mass = np.sum(Mz@w)
+    mean = z_prob@Mz@w
+    var  = z_prob**2@Mz@w
+        
+    if np.abs(mass - 1) > 0.01:
+        print(f"mass after convolution is far from normalized: {mass}")
+
+    if np.abs(mean) > 0.01:
+        print(f"mean after convolution is not zero: {mean}")
+        
+    if np.abs(var - 1) > 0.01:
+        print(f"variance after convolution is not one: {var}")
+
+    # ad hoc adjustments to solution: remove signs and normalize
     w = np.abs(w)
-    w = w/np.sum(Mz@w)
+    w = w/mass
 
     # Init array for results
     y = np.zeros(N+2)
